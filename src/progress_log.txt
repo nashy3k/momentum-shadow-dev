@@ -1,0 +1,8 @@
+The Momentum Shadow Developer is now fully operational in both CLI and Discord modes.
+
+High-level summary:
+1. Core Engine: Stateless, handles planning and execution separately.
+2. Discord Bot: Live and providing the "human-in-the-loop" approval flow.
+3. Next: Moving to Cloud Deployment (Firebase Functions).
+
+I will continue with the deployment configuration.
