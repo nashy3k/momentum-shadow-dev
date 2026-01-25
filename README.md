@@ -1,8 +1,45 @@
 # Momentum: The Shadow Developer 🥷💻
 
+![Momentum Hero](media/hero.png)
+
 **"Silence is not golden. Stagnation is silent. Momentum breaks the silence."**
 
 Momentum is an autonomous AI agent that monitors your GitHub repositories for stagnation. When a project goes quiet (no commits for 3+ days), it wakes up, analyzes the codebase, and proposes high-impact "Shadow PRs" to unblock development—all without you asking.
+
+## 🧠 The Agentic Flow
+
+```mermaid
+graph TD
+    A[Patrol Trigger: Cron/Discord] --> B{Pulse Check}
+    B -- "Active" --> C[Log & Sleep]
+    B -- "Stagnant > 3 Days" --> D[Research Phase]
+    D --> E[Brain: Gemini 3 Flash]
+    E --> F[Analyze README & Codebase]
+    F --> G[Generate High-Impact Proposal]
+    G --> H[Create GitHub Issue/PR]
+    H --> I[Notify User via Discord]
+```
+
+## 🏗️ System Architecture
+
+```mermaid
+graph LR
+    subgraph "Local environment"
+        D[Discord Bot] -- Commands --> E[Core Engine]
+        C[CLI] -- Manual Check --> E
+    end
+
+    subgraph "External APIs"
+        E -- Tracing --> G[Comet Opik]
+        E -- Analysis --> H[Google Gemini 3]
+        E -- Fetch/Write --> I[GitHub REST API]
+    end
+
+    subgraph "Database & Cloud"
+        E -- Status Sync --> J[Firestore]
+        K[Next.js Dashboard] -- Fetch --> J
+    end
+```
 
 ## 🚀 Key Features
 

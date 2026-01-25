@@ -33,3 +33,13 @@ Thumbs.db
 firebase-debug.log
 firestore-debug.log
 ui-debug.log
+
+# Credentials
+service-account-key.json
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+!firebase.json
+!next.config.json
+!apphosting.yaml

@@ -5,6 +5,8 @@ import * as path from 'path';
 import * as dotenv from 'dotenv';
 import { execSync } from 'child_process';
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getFirestore, FieldValue, Firestore } from 'firebase-admin/firestore';
 
 // Initialize Genkit
 const ai = genkit({});
@@ -33,6 +35,8 @@ export interface MomentumResult {
 export class CoreEngine {
     private model: any;
     private opik: Opik;
+    private db: Firestore | null = null;
+    private dbEnabled: boolean = true;
 
     constructor() {
         // Robust Opik Init
@@ -56,6 +60,29 @@ export class CoreEngine {
                 }),
                 flush: async () => { },
             } as any;
+        }
+
+        // Initialize Firebase Admin with Service Account
+        try {
+            if (getApps().length === 0) {
+                const keyPath = path.resolve(process.cwd(), 'service-account-key.json');
+                if (fs.existsSync(keyPath)) {
+                    initializeApp({
+                        credential: cert(keyPath),
+                        projectId: 'momentum-shadow-dev-4321'
+                    });
+                } else {
+                    initializeApp({
+                        projectId: 'momentum-shadow-dev-4321'
+                    });
+                }
+            }
+            this.db = getFirestore();
+            this.dbEnabled = true;
+            console.log('[Core] Firestore initialized with Service Account.');
+        } catch (err: any) {
+            console.warn('[Core] Firestore init error:', err.message);
+            this.dbEnabled = false;
         }
 
         const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || '');
@@ -127,6 +154,11 @@ export class CoreEngine {
 
             if (!isStagnant) {
                 const res: MomentumResult = { isStagnant: false, repoRef, daysSince, status: 'ACTIVE' };
+                await this.upsertRepoDoc(repoRef, {
+                    status: 'ACTIVE',
+                    lastCheck: FieldValue.serverTimestamp(),
+                    daysSince: Number(daysSince.toFixed(1))
+                });
                 trace.update({ output: res as any });
                 trace.end();
                 await this.opik.flush();
@@ -189,6 +221,14 @@ export class CoreEngine {
             researchSpan.update({ output: { proposal } });
             researchSpan.end();
             const finalRes: MomentumResult = { isStagnant: true, repoRef, daysSince, proposal, status: 'STAGNANT_PLANNING' };
+
+            await this.upsertRepoDoc(repoRef, {
+                status: 'STAGNANT_PLANNING',
+                lastCheck: FieldValue.serverTimestamp(),
+                daysSince: Number(daysSince.toFixed(1)),
+                activeProposal: proposal
+            });
+
             trace.update({ output: finalRes as any });
             trace.end();
             await this.opik.flush();
@@ -233,16 +273,48 @@ export class CoreEngine {
                 issueUrl: url,
                 status: 'COMPLETE'
             };
+
+            await this.upsertRepoDoc(proposal.repoRef, {
+                status: 'COMPLETE',
+                lastCheck: FieldValue.serverTimestamp(),
+                issueUrl: url,
+                activeProposal: null // Clear it once done
+            });
+
             trace.update({ output: res as any });
             trace.end();
             await this.opik.flush();
             return res;
         } catch (e: any) {
             console.error('[Core Error] execute failed:', e.message);
+
+            await this.upsertRepoDoc(proposal.repoRef, {
+                status: 'FAILED',
+                lastCheck: FieldValue.serverTimestamp(),
+                error: e.message
+            });
+
             trace.update({ output: { error: e.message } });
             trace.end();
             await this.opik.flush();
             return { isStagnant: true, repoRef: proposal.repoRef, status: 'FAILED', error: e.message };
+        }
+    }
+
+    private async upsertRepoDoc(repoRef: string, data: any) {
+        if (!this.dbEnabled || !this.db) return;
+
+        const docId = repoRef.replace(/\//g, '-');
+        try {
+            await this.db.collection('repositories').doc(docId).set({
+                repoRef,
+                ...data,
+                updatedAt: FieldValue.serverTimestamp()
+            }, { merge: true });
+            console.log(`[Core] Firestore Sync: repositories/${docId}`);
+        } catch (err: any) {
+            console.warn(`[Core Firestore Warn] Sync failed: ${err.message}. Disabling DB for this session.`);
+            this.dbEnabled = false;
         }
     }
 }
