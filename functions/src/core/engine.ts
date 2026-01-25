@@ -35,15 +35,28 @@ export class CoreEngine {
     private opik: Opik;
 
     constructor() {
-        // Ensure env is loaded or assumed to be loaded by the caller
-        this.opik = new Opik({
-            projectName: 'momentum',
-            apiKey: process.env.OPIK_API_KEY,
-            headers: {
-                'Authorization': process.env.OPIK_API_KEY || '',
-                'Comet-Workspace': process.env.OPIK_WORKSPACE || '',
-            },
-        });
+        // Robust Opik Init
+        const opikKey = process.env.OPIK_API_KEY;
+        if (opikKey) {
+            this.opik = new Opik({
+                projectName: 'momentum',
+                apiKey: opikKey,
+                headers: {
+                    'Authorization': opikKey,
+                    'Comet-Workspace': process.env.OPIK_WORKSPACE || '',
+                },
+            });
+        } else {
+            console.warn('[Core] OPIK_API_KEY not found. Running without observability.');
+            this.opik = {
+                trace: () => ({
+                    span: () => ({ update: () => { }, end: () => { } }),
+                    update: () => { },
+                    end: () => { }
+                }),
+                flush: async () => { },
+            } as any;
+        }
 
         const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || '');
         this.model = genAI.getGenerativeModel({
@@ -85,10 +98,21 @@ export class CoreEngine {
             let repoRef = '';
 
             if (isRemote) {
-                const match = repoPath.match(/github\.com\/([^\/]+\/[^\/]+)/);
-                repoRef = match ? match[1].replace(/\.git$/, '') : repoPath;
-                const out = execSync(`${GH_PATH} api repos/${repoRef} --jq .pushed_at`, { encoding: 'utf-8' }).trim();
-                lastCommitTime = new Date(out).getTime();
+                const match = repoPath.match(/github\.com\/([^\\/]+\/[^\\/]+)/);
+                repoRef = (match && match[1]) ? match[1].replace(/\.git$/, '') : repoPath;
+
+                // Use native fetch instead of GH CLI for Cloud compatibility
+                console.log(`[Core] Fetching API: https://api.github.com/repos/${repoRef}`);
+                const response = await fetch(`https://api.github.com/repos/${repoRef}`, {
+                    headers: {
+                        'Accept': 'application/vnd.github.v3+json',
+                        'User-Agent': 'Momentum-Shadow-Developer'
+                    }
+                });
+
+                if (!response.ok) throw new Error(`GitHub API error: ${response.statusText}`);
+                const data = await response.json() as any;
+                lastCommitTime = new Date(data.pushed_at).getTime();
             } else {
                 repoRef = path.resolve(repoPath);
                 const out = execSync(`git -C "${repoRef}" log -1 --format=%ct`, { encoding: 'utf-8' }).trim();
@@ -98,30 +122,56 @@ export class CoreEngine {
             const daysSince = (Date.now() - lastCommitTime) / (24 * 60 * 60 * 1000);
             const isStagnant = daysSince > 3;
 
-            checkSpan.end({ output: { isStagnant, daysSince, repoRef } });
+            checkSpan.update({ output: { isStagnant, daysSince, repoRef } });
+            checkSpan.end();
 
             if (!isStagnant) {
                 const res: MomentumResult = { isStagnant: false, repoRef, daysSince, status: 'ACTIVE' };
-                trace.end({ output: res });
+                trace.update({ output: res as any });
+                trace.end();
                 await this.opik.flush();
                 return res;
             }
+
 
             // Brain Research
             console.log(`[Core] Stagnation detected (${daysSince.toFixed(1)} days). Researching...`);
             const researchSpan = trace.span({ name: 'brain-research', type: 'llm' });
 
+            let context = 'No context available.';
+            if (isRemote) {
+                try {
+                    console.log(`[Core] Fetching README for context: ${repoRef}`);
+                    const readmeRes = await fetch(`https://api.github.com/repos/${repoRef}/readme`, {
+                        headers: {
+                            'Accept': 'application/vnd.github.v3+json',
+                            'User-Agent': 'Momentum-Shadow-Developer',
+                            'Authorization': `token ${process.env.GITHUB_TOKEN || ''}`
+                        }
+                    });
+                    if (readmeRes.ok) {
+                        const readmeData = await readmeRes.json() as any;
+                        const content = Buffer.from(readmeData.content, 'base64').toString('utf-8').slice(0, 2000); // Limit context
+                        context = `README Snippet:\n${content}`;
+                    }
+                } catch (err) {
+                    console.warn('[Core] Failed to fetch README:', err);
+                }
+            }
+
             const chat = this.model.startChat({ tools: [{ functionDeclarations: this.getTools() as any }] });
-            const prompt = `Repository ${repoRef} is stagnant. Propose a change now with researchRepo.`;
+            const prompt = `Repository ${repoRef} is stagnant. \n\nContext:\n${context}\n\nPropose a high-impact improvement change now with researchRepo tool.`;
             researchSpan.update({ input: { prompt } });
 
             const result = await chat.sendMessage(prompt);
-            const fc = result.response.candidates?.[0]?.content?.parts?.find(p => (p as any).functionCall)?.functionCall;
+            const fc = result.response.candidates?.[0]?.content?.parts?.find((p: any) => (p as any).functionCall)?.functionCall;
 
             if (!fc || fc.name !== 'researchRepo') {
                 const err = 'Brain failed to generate a tool-based plan.';
-                researchSpan.end({ output: { error: err, text: result.response.text ? result.response.text() : '' } });
-                trace.end({ output: { status: 'FAILED', error: err } });
+                researchSpan.update({ output: { error: err, text: result.response.text ? result.response.text() : '' } });
+                researchSpan.end();
+                trace.update({ output: { status: 'FAILED', error: err } });
+                trace.end();
                 await this.opik.flush();
                 return { isStagnant: true, repoRef, status: 'FAILED', error: err };
             }
@@ -136,15 +186,18 @@ export class CoreEngine {
                 body: `Automated improvement proposed to unblock development.\nTarget File: ${plan.targetFile}`
             };
 
-            researchSpan.end({ output: { proposal } });
+            researchSpan.update({ output: { proposal } });
+            researchSpan.end();
             const finalRes: MomentumResult = { isStagnant: true, repoRef, daysSince, proposal, status: 'STAGNANT_PLANNING' };
-            trace.end({ output: finalRes });
+            trace.update({ output: finalRes as any });
+            trace.end();
             await this.opik.flush();
             return finalRes;
 
         } catch (e: any) {
             console.error('[Core Error] plan failed:', e.message);
-            trace.end({ output: { error: e.message } });
+            trace.update({ output: { error: e.message } });
+            trace.end();
             await this.opik.flush();
             return { isStagnant: false, repoRef: repoPath, status: 'FAILED', error: e.message };
         }
@@ -156,11 +209,23 @@ export class CoreEngine {
     async execute(proposal: MomentumProposal): Promise<MomentumResult> {
         const trace = this.opik.trace({ name: 'momentum-execute', input: { proposal } });
         try {
-            console.log(`[Core] Executing Shadow PR on ${proposal.repoRef}...`);
             const sTitle = proposal.title.replace(/"/g, "'");
             const sBody = `${proposal.body}\n\nProposed Change:\n\`\`\`\n${proposal.codeChange}\n\`\`\``.replace(/"/g, "'");
 
-            const url = execSync(`${GH_PATH} issue create -R ${proposal.repoRef} --title "${sTitle}" --body "${sBody}"`, { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+            console.log(`[Core] Creating Issue via API: ${proposal.repoRef}`);
+            const response = await fetch(`https://api.github.com/repos/${proposal.repoRef}/issues`, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/vnd.github.v3+json',
+                    'Authorization': `token ${process.env.GITHUB_TOKEN || ''}`,
+                    'User-Agent': 'Momentum-Shadow-Developer'
+                },
+                body: JSON.stringify({ title: sTitle, body: sBody })
+            });
+
+            if (!response.ok) throw new Error(`GitHub Create Issue Error: ${response.statusText}`);
+            const data = await response.json() as any;
+            const url = data.html_url;
 
             const res: MomentumResult = {
                 isStagnant: true,
@@ -168,12 +233,14 @@ export class CoreEngine {
                 issueUrl: url,
                 status: 'COMPLETE'
             };
-            trace.end({ output: res });
+            trace.update({ output: res as any });
+            trace.end();
             await this.opik.flush();
             return res;
         } catch (e: any) {
             console.error('[Core Error] execute failed:', e.message);
-            trace.end({ output: { error: e.message } });
+            trace.update({ output: { error: e.message } });
+            trace.end();
             await this.opik.flush();
             return { isStagnant: true, repoRef: proposal.repoRef, status: 'FAILED', error: e.message };
         }

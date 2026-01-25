@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "momentum": "tsx src/process/momentum.ts"
+    "momentum": "tsx src/process/momentum.ts",
+    "start-bot": "tsx src/discord/bot.ts"
   },
   "dependencies": {
     "@genkit-ai/google-genai": "^1.28.0",

@@ -8,17 +8,17 @@ dotenv.config();
 
 const engine = new CoreEngine();
 
+const secrets = ["GOOGLE_API_KEY", "OPIK_API_KEY", "DISCORD_TOKEN", "OPIK_WORKSPACE", "GITHUB_TOKEN"];
+
 /**
  * Manual Trigger for a specific repo.
  */
-export const pulseRepo = onRequest(async (req, res) => {
+export const pulseRepo = onRequest({ secrets }, async (req, res) => {
     const repo = (req.query.repo as string) || "https://github.com/nashy3k/autism-comm-cards";
     console.log(`[Cloud] Pulsing repo: ${repo}`);
 
     try {
         const result = await engine.plan(repo);
-        // In a real hackathon app, this would send a Discord notification here
-        // If stagnation detected.
         res.json({ success: true, result });
     } catch (e: any) {
         res.status(500).json({ success: false, error: e.message });
@@ -28,7 +28,10 @@ export const pulseRepo = onRequest(async (req, res) => {
 /**
  * Nightly Patrol: Runs every day at 8 AM.
  */
-export const nightlyPatrol = onSchedule("0 8 * * *", async (event) => {
+export const nightlyPatrol = onSchedule({
+    schedule: "0 8 * * *",
+    secrets
+}, async (event) => {
     // List of repos to monitor
     const repos = ["https://github.com/nashy3k/autism-comm-cards"];
 
@@ -37,7 +40,6 @@ export const nightlyPatrol = onSchedule("0 8 * * *", async (event) => {
             const result = await engine.plan(repo);
             if (result.isStagnant) {
                 console.log(`[Patrol] Repo ${repo} is stagnant. Proposal generated.`);
-                // Here you would trigger the Discord notification
             }
         } catch (e) {
             console.error(`[Patrol] Failed for ${repo}:`, e);

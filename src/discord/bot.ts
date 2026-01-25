@@ -8,7 +8,10 @@ import {
     Events,
     REST,
     Routes,
-    SlashCommandBuilder
+    SlashCommandBuilder,
+    type Interaction,
+    type ChatInputCommandInteraction,
+    type ButtonInteraction
 } from 'discord.js';
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
@@ -38,11 +41,12 @@ const userSettings = new Map<string, { timezone: string }>();
 const commands = [
     new SlashCommandBuilder()
         .setName('momentum')
-        .setDescription('Check repository stagnation and research improvements.')
-        .addStringOption(option =>
-            option.setName('repo')
-                .setDescription('The GitHub Repo URL or local path')
-                .setRequired(true)),
+        .setDescription('Momentum Shadow Developer')
+        .addSubcommand(sub =>
+            sub.setName('check')
+                .setDescription('Check repository for stagnation')
+                .addStringOption(opt => opt.setName('repo').setDescription('The GitHub Repo URL or local path').setRequired(true))
+        ),
     new SlashCommandBuilder()
         .setName('momentum-settings')
         .setDescription('Configure your Shadow Developer preferences.')
@@ -74,61 +78,76 @@ client.once(Events.ClientReady, c => {
     });
 });
 
-client.on(Events.InteractionCreate, async interaction => {
+client.on(Events.InteractionCreate, async (interaction: Interaction) => {
     if (interaction.isChatInputCommand()) {
-        if (interaction.commandName === 'momentum') {
-            const repo = interaction.options.getString('repo')!;
-            await interaction.deferReply();
+        const cmdInteraction = interaction as ChatInputCommandInteraction;
 
-            try {
-                const result = await engine.plan(repo);
+        if (cmdInteraction.commandName === 'momentum') {
+            const subcommand = cmdInteraction.options.getSubcommand();
+            if (subcommand === 'check') {
+                const repoInput = cmdInteraction.options.getString('repo')!.trim();
 
-                if (result.status === 'ACTIVE') {
-                    return interaction.editReply(`✅ **${result.repoRef}** is healthy! (Last active ${result.daysSince?.toFixed(1)} days ago).`);
+                // Hard check for common "command as argument" mistakes
+                if (repoInput.toLowerCase().includes('check!') || repoInput.toLowerCase() === 'check') {
+                    return cmdInteraction.reply({
+                        content: '❌ **Tip**: You don\'t need to type "check!". Just paste your repository URL in the "repo" box.\n\n**Example**: `/momentum check repo:https://github.com/nashy3k/vector-skylab`',
+                        ephemeral: true
+                    });
                 }
+                const repo = repoInput;
 
-                if (result.status === 'FAILED') {
-                    return interaction.editReply(`❌ **System Error**: ${result.error}`);
+                await cmdInteraction.deferReply();
+
+                try {
+                    const result = await engine.plan(repo);
+
+                    if (result.status === 'ACTIVE') {
+                        return cmdInteraction.editReply(`✅ **${result.repoRef}** is healthy! (Last active ${result.daysSince?.toFixed(1)} days ago).`);
+                    }
+
+                    if (result.status === 'FAILED') {
+                        return cmdInteraction.editReply(`❌ **System Error**: ${result.error || 'Unknown Error'}`);
+                    }
+
+                    if (result.proposal) {
+                        const proposalId = Math.random().toString(36).substring(7);
+                        pendingProposals.set(proposalId, result.proposal);
+
+                        const embed = new EmbedBuilder()
+                            .setColor(0x0099FF)
+                            .setTitle('🚨 Stagnation Detected!')
+                            .setDescription(`The repository **${result.repoRef}** has been inactive for **${result.daysSince?.toFixed(1) || '3+'}** days.`)
+                            .addFields(
+                                { name: 'Brain Suggestion', value: result.proposal.description },
+                                { name: 'Target File', value: result.proposal.targetFile }
+                            )
+                            .setFooter({ text: 'Momentum Shadow Developer • Gemini 3 Flash' })
+                            .setTimestamp();
+
+                        const row = new ActionRowBuilder<ButtonBuilder>()
+                            .addComponents(
+                                new ButtonBuilder()
+                                    .setCustomId(`approve_${proposalId}`)
+                                    .setLabel('Approve & Push')
+                                    .setStyle(ButtonStyle.Success),
+                                new ButtonBuilder()
+                                    .setCustomId(`reject_${proposalId}`)
+                                    .setLabel('Reject')
+                                    .setStyle(ButtonStyle.Danger),
+                            );
+
+                        await cmdInteraction.editReply({ embeds: [embed], components: [row] });
+                    }
+                } catch (err: any) {
+                    await cmdInteraction.editReply(`💥 **Fatal crash**: ${err.message || 'An unknown error occurred.'}`);
                 }
-
-                if (result.proposal) {
-                    const proposalId = Math.random().toString(36).substring(7);
-                    pendingProposals.set(proposalId, result.proposal);
-
-                    const embed = new EmbedBuilder()
-                        .setColor(0x0099FF)
-                        .setTitle('🚨 Stagnation Detected!')
-                        .setDescription(`The repository **${result.repoRef}** has been inactive for **${result.daysSince?.toFixed(1)}** days.`)
-                        .addFields(
-                            { name: 'Brain Suggestion', value: result.proposal.description },
-                            { name: 'Target File', value: result.proposal.targetFile }
-                        )
-                        .setFooter({ text: 'Momentum Shadow Developer • Gemini 3 Flash' })
-                        .setTimestamp();
-
-                    const row = new ActionRowBuilder<ButtonBuilder>()
-                        .addComponents(
-                            new ButtonBuilder()
-                                .setCustomId(`approve_${proposalId}`)
-                                .setLabel('Approve & Push')
-                                .setStyle(ButtonStyle.Success),
-                            new ButtonBuilder()
-                                .setCustomId(`reject_${proposalId}`)
-                                .setLabel('Reject')
-                                .setStyle(ButtonStyle.Danger),
-                        );
-
-                    await interaction.editReply({ embeds: [embed], components: [row] });
-                }
-            } catch (err: any) {
-                await interaction.editReply(`💥 **Fatal crash**: ${err.message}`);
             }
         }
 
-        if (interaction.commandName === 'momentum-settings') {
-            const tz = interaction.options.getString('timezone')!;
-            userSettings.set(interaction.user.id, { timezone: tz });
-            await interaction.reply({
+        if (cmdInteraction.commandName === 'momentum-settings') {
+            const tz = cmdInteraction.options.getString('timezone')!;
+            userSettings.set(cmdInteraction.user.id, { timezone: tz });
+            await cmdInteraction.reply({
                 content: `✅ **Settings Updated!** Your timezone is now set to \`${tz}\`. Nightly patrols will now respect your local 8 AM.`,
                 ephemeral: true
             });
@@ -136,30 +155,51 @@ client.on(Events.InteractionCreate, async interaction => {
     }
 
     if (interaction.isButton()) {
-        const [action, proposalId] = interaction.customId.split('_');
+        const btnInteraction = interaction as ButtonInteraction;
+        const [action, proposalId] = btnInteraction.customId.split('_');
         const proposal = pendingProposals.get(proposalId);
 
         if (!proposal) {
-            return interaction.reply({ content: 'Proposal expired or not found.', ephemeral: true });
+            return btnInteraction.reply({ content: 'Proposal expired or not found.', ephemeral: true });
         }
 
         if (action === 'approve') {
-            await interaction.update({ content: '🚀 **Executing Shadow PR...**', components: [], embeds: interaction.message.embeds });
+            await btnInteraction.update({
+                content: '🚀 **Executing Shadow PR...**',
+                components: [],
+                embeds: btnInteraction.message.embeds
+            });
 
             try {
                 const result = await engine.execute(proposal);
-                if (result.status === 'COMPLETE') {
-                    await interaction.followUp(`✅ **Success!** Improvement published to: ${result.issueUrl}`);
-                    pendingProposals.delete(proposalId);
+
+                if (result.status === 'COMPLETE' && result.issueUrl) {
+                    await btnInteraction.editReply({
+                        content: `✅ **Approved!** Issue created: ${result.issueUrl}`,
+                        components: [],
+                        embeds: []
+                    });
                 } else {
-                    await interaction.followUp(`❌ **Execution Failed**: ${result.error}`);
+                    await btnInteraction.editReply({
+                        content: `❌ **Execution Failed:** ${result.error || 'Unknown Error'}`,
+                        components: [],
+                        embeds: []
+                    });
                 }
             } catch (e: any) {
-                await interaction.followUp(`💥 **Execution Error**: ${e.message}`);
+                console.error('[Bot Error] Execution:', e.message);
+                await btnInteraction.followUp({
+                    content: `❌ **System Error:** ${e.message || 'An unknown error occurred.'}`,
+                    ephemeral: true
+                });
             }
         } else {
             pendingProposals.delete(proposalId);
-            await interaction.update({ content: '❌ **Proposal Rejected.**', components: [], embeds: interaction.message.embeds });
+            await btnInteraction.update({
+                content: '❌ **Proposal Rejected.**',
+                components: [],
+                embeds: btnInteraction.message.embeds
+            });
         }
     }
 });
