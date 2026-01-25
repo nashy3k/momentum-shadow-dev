@@ -1,0 +1,12 @@
+kind: AppHostingConfig
+schemaVersion: v1
+# Directing the build to the 'web' subfolder
+runConfig:
+  concurrency: 80
+  cpu: 1
+  memoryMiB: 512
+env:
+  - variable: NODE_VERSION
+    value: 22
+  - variable: FIREBASE_PROJECT_ID
+    value: momentum-shadow-dev-4321
