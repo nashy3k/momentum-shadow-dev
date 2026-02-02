@@ -148,9 +148,13 @@ export default async function Dashboard() {
                     View Issue
                   </a>
                 )}
-                <button className="px-4 py-2 h-10 bg-blue-600 rounded-lg font-bold text-sm shadow-lg shadow-blue-500/20 hover:bg-blue-500 hover:scale-105 transition-all">
+                <a
+                  href={repo.repoRef.startsWith('http') ? repo.repoRef : `https://github.com/${repo.repoRef}`}
+                  target="_blank"
+                  className="px-4 py-2 h-10 bg-blue-600 rounded-lg font-bold text-sm shadow-lg shadow-blue-500/20 hover:bg-blue-500 hover:scale-105 transition-all flex items-center justify-center text-center"
+                >
                   Details
-                </button>
+                </a>
               </div>
             </div>
           </div>

@@ -317,4 +317,28 @@ export class CoreEngine {
             this.dbEnabled = false;
         }
     }
+
+    async untrack(repoPath: string): Promise<{ success: boolean; error?: string }> {
+        if (!this.dbEnabled || !this.db) {
+            return { success: false, error: 'Database not enabled.' };
+        }
+
+        let repoRef = '';
+        if (repoPath.includes('github.com')) {
+            const match = repoPath.match(/github\.com\/([^\\/]+\/[^\\/]+)/);
+            repoRef = (match && match[1]) ? match[1].replace(/\.git$/, '') : repoPath;
+        } else {
+            repoRef = repoPath;
+        }
+
+        const docId = repoRef.replace(/\//g, '-');
+        try {
+            await this.db.collection('repositories').doc(docId).delete();
+            console.log(`[Core] Firestore Untrack: repositories/${docId}`);
+            return { success: true };
+        } catch (err: any) {
+            console.error(`[Core Error] Untrack failed: ${err.message}`);
+            return { success: false, error: err.message };
+        }
+    }
 }

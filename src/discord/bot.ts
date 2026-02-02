@@ -46,6 +46,11 @@ const commands = [
             sub.setName('check')
                 .setDescription('Check repository for stagnation')
                 .addStringOption(opt => opt.setName('repo').setDescription('The GitHub Repo URL or local path').setRequired(true))
+        )
+        .addSubcommand(sub =>
+            sub.setName('untrack')
+                .setDescription('Remove a repository from monitoring')
+                .addStringOption(opt => opt.setName('repo').setDescription('The GitHub Repo URL or local path').setRequired(true))
         ),
     new SlashCommandBuilder()
         .setName('momentum-settings')
@@ -141,6 +146,16 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
                 } catch (err: any) {
                     await cmdInteraction.editReply(`💥 **Fatal crash**: ${err.message || 'An unknown error occurred.'}`);
                 }
+            } else if (subcommand === 'untrack') {
+                const repoInput = cmdInteraction.options.getString('repo')!.trim();
+                await cmdInteraction.deferReply({ ephemeral: true });
+
+                const result = await engine.untrack(repoInput);
+                if (result.success) {
+                    await cmdInteraction.editReply(`🗑️ **Untracked**: ${repoInput} has been removed from monitoring and the dashboard.`);
+                } else {
+                    await cmdInteraction.editReply(`❌ **Failed to untrack**: ${result.error || 'Unknown Error'}`);
+                }
             }
         }
 
@@ -157,6 +172,9 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
     if (interaction.isButton()) {
         const btnInteraction = interaction as ButtonInteraction;
         const [action, proposalId] = btnInteraction.customId.split('_');
+        if (!proposalId) {
+            return btnInteraction.reply({ content: 'Invalid interaction.', ephemeral: true });
+        }
         const proposal = pendingProposals.get(proposalId);
 
         if (!proposal) {
@@ -194,7 +212,9 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
                 });
             }
         } else {
-            pendingProposals.delete(proposalId);
+            if (proposalId) {
+                pendingProposals.delete(proposalId);
+            }
             await btnInteraction.update({
                 content: '❌ **Proposal Rejected.**',
                 components: [],
