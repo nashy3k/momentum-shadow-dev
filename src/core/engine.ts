@@ -228,8 +228,8 @@ export class CoreEngine {
             let iter = 0;
             let currentMessage = prompt;
 
-            // Research Loop (Max 5 steps)
-            while (iter < 5) {
+            // Research Loop (Max 8 steps)
+            while (iter < 8) {
                 const result = await chat.sendMessage(currentMessage);
                 const part = result.response.candidates?.[0]?.content?.parts?.find((p: any) => p.functionCall);
                 fc = part?.functionCall;
@@ -270,10 +270,12 @@ export class CoreEngine {
                     toolResult = `Error: ${err.message}`;
                 }
 
+                console.log(`[Core] Tool Result: ${toolResult.slice(0, 100)}...`);
+
                 currentMessage = [{
                     functionResponse: {
                         name: fc.name,
-                        response: { content: toolResult }
+                        response: { name: fc.name, content: { result: toolResult } }
                     }
                 }] as any;
                 iter++;
