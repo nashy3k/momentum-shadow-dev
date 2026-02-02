@@ -51,6 +51,11 @@ const commands = [
             sub.setName('untrack')
                 .setDescription('Remove a repository from monitoring')
                 .addStringOption(opt => opt.setName('repo').setDescription('The GitHub Repo URL or local path').setRequired(true))
+        )
+        .addSubcommand(sub =>
+            sub.setName('link')
+                .setDescription('Link your Discord ID to your Dashboard email')
+                .addStringOption(opt => opt.setName('email').setDescription('The email you use to login to the Dashboard').setRequired(true))
         ),
     new SlashCommandBuilder()
         .setName('momentum-settings')
@@ -155,6 +160,16 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
                     await cmdInteraction.editReply(`🗑️ **Untracked**: ${repoInput} has been removed from monitoring and the dashboard.`);
                 } else {
                     await cmdInteraction.editReply(`❌ **Failed to untrack**: ${result.error || 'Unknown Error'}`);
+                }
+            } else if (subcommand === 'link') {
+                const email = cmdInteraction.options.getString('email')!.trim();
+                await cmdInteraction.deferReply({ ephemeral: true });
+
+                const result = await engine.linkAccount(cmdInteraction.user.id, email);
+                if (result.success) {
+                    await cmdInteraction.editReply(`🔗 **LinkedIn**: Your Discord account is now paired with \`${email}\`. Your dashboard will now show your Discord identity!`);
+                } else {
+                    await cmdInteraction.editReply(`❌ **Link Failed**: ${result.error || 'Unknown Error'}`);
                 }
             }
         }

@@ -36,9 +36,26 @@ async function getRepos() {
   }
 }
 
+async function getUserLink(email: string | null | undefined) {
+  if (!email) return null;
+  try {
+    const doc = await db.collection('users').doc(email).get();
+    if (doc.exists) {
+      return doc.data();
+    }
+  } catch (err) {
+    console.error('[Dashboard] User Fetch Error:', err);
+  }
+  return null;
+}
+
 export default async function Dashboard() {
   const session = await auth();
-  const { data: repos, error } = await getRepos();
+  const [reposResult, userLink] = await Promise.all([
+    getRepos(),
+    getUserLink(session?.user?.email)
+  ]);
+  const { data: repos, error } = reposResult;
 
   const totalUnblocks = repos.reduce((acc, repo: any) => acc + (repo.unblocks || 0), 0);
   const stagnantCount = repos.filter((r: any) => r.status === 'STAGNANT_PLANNING').length;
@@ -77,7 +94,15 @@ export default async function Dashboard() {
                   </div>
                 )}
                 <div className="hidden sm:block">
-                  <p className="text-xs font-bold leading-none">{session.user.name}</p>
+                  <p className="text-xs font-bold leading-none flex items-center gap-2">
+                    {session.user.name}
+                    {userLink && (
+                      <span className="text-[10px] px-1.5 py-0.5 bg-indigo-500/20 text-indigo-400 rounded border border-indigo-500/30 flex items-center gap-1">
+                        <MessageSquare size={10} />
+                        Linked
+                      </span>
+                    )}
+                  </p>
                   <p className="text-[10px] text-zinc-500">{session.user.email}</p>
                 </div>
               </div>

@@ -341,4 +341,23 @@ export class CoreEngine {
             return { success: false, error: err.message };
         }
     }
+
+    async linkAccount(discordId: string, email: string): Promise<{ success: boolean; error?: string }> {
+        if (!this.dbEnabled || !this.db) {
+            return { success: false, error: 'Database not enabled.' };
+        }
+
+        try {
+            await this.db.collection('users').doc(email).set({
+                discordId,
+                email,
+                linkedAt: FieldValue.serverTimestamp()
+            }, { merge: true });
+            console.log(`[Core] Identity Linked: ${discordId} -> ${email}`);
+            return { success: true };
+        } catch (err: any) {
+            console.error(`[Core Error] Link failed: ${err.message}`);
+            return { success: false, error: err.message };
+        }
+    }
 }
