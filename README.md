@@ -34,7 +34,7 @@ flowchart LR
     end
 
     subgraph APIs [External APIs]
-        Opik[Commet Opik]
+        Opik[Comet Opik]
         Gemini[Google Gemini 3]
         GitHub[GitHub REST API]
     end
