@@ -8,10 +8,13 @@ import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore, FieldValue, Firestore } from 'firebase-admin/firestore';
 
+// Load environment variables
+dotenv.config();
+
 // Initialize Genkit
 const ai = genkit({});
 
-const GH_PATH = '"C:\\Program Files\\GitHub CLI\\gh.exe"';
+const GH_PATH = process.platform === 'win32' ? '"C:\\Program Files\\GitHub CLI\\gh.exe"' : 'gh';
 
 export interface MomentumProposal {
     repoRef: string;
@@ -87,8 +90,12 @@ export class CoreEngine {
 
         const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || '');
         this.model = genAI.getGenerativeModel({
-            model: 'gemini-3-flash-preview',
-            systemInstruction: 'You are Momentum, a Shadow Developer agent. Your sole purpose is to unblock stagnant repositories. You MUST call researchRepo to propose an improvement. DO NOT TALK. ONLY CALL TOOLS.'
+            model: 'gemini-2.0-flash-exp', // Standard Flash 2.0 or 1.5 is more stable for tool calls
+            systemInstruction: 'You are Momentum, a Shadow Developer agent. Your purpose is to unblock stagnant repositories with high-quality, actionable code changes. \n' +
+                '1. ALWAYS start by listing the files in the repository if you don\'t have a clear idea of the structure.\n' +
+                '2. ALWAYS read the content of relevant files (package.json, README, or source files) before proposing a change.\n' +
+                '3. Propose a change that actually improves the repo (e.g., adding a test, fixing a bug, updating a dependency, adding a feature).\n' +
+                '4. ONLY call researchRepo when you have a specific, high-quality code change to propose.'
         });
     }
 
@@ -96,16 +103,37 @@ export class CoreEngine {
         return [
             {
                 name: 'researchRepo',
-                description: 'Suggests a repo improvement or fix.',
+                description: 'Suggests a repo improvement or fix. Call this only after researching.',
                 parameters: {
                     type: SchemaType.OBJECT,
                     properties: {
-                        targetFile: { type: SchemaType.STRING },
-                        description: { type: SchemaType.STRING },
-                        codeChange: { type: SchemaType.STRING },
+                        targetFile: { type: SchemaType.STRING, description: 'The file to modify or create.' },
+                        description: { type: SchemaType.STRING, description: 'Short summary of the change.' },
+                        codeChange: { type: SchemaType.STRING, description: 'The actual code to be applied.' },
                     },
                     required: ['targetFile', 'description', 'codeChange'],
                 },
+            },
+            {
+                name: 'listFiles',
+                description: 'List contents of a directory in the repo.',
+                parameters: {
+                    type: SchemaType.OBJECT,
+                    properties: {
+                        path: { type: SchemaType.STRING, description: 'Directory path (relative to root, default "")' }
+                    }
+                }
+            },
+            {
+                name: 'getFile',
+                description: 'Read the content of a file.',
+                parameters: {
+                    type: SchemaType.OBJECT,
+                    properties: {
+                        path: { type: SchemaType.STRING, description: 'File path relative to root.' }
+                    },
+                    required: ['path']
+                }
             }
         ];
     }
@@ -173,14 +201,15 @@ export class CoreEngine {
             let context = 'No context available.';
             if (isRemote) {
                 try {
+                    const headers: any = {
+                        'Accept': 'application/vnd.github.v3+json',
+                        'User-Agent': 'Momentum-Shadow-Developer'
+                    };
+                    if (process.env.GITHUB_TOKEN) {
+                        headers['Authorization'] = `token ${process.env.GITHUB_TOKEN}`;
+                    }
                     console.log(`[Core] Fetching README for context: ${repoRef}`);
-                    const readmeRes = await fetch(`https://api.github.com/repos/${repoRef}/readme`, {
-                        headers: {
-                            'Accept': 'application/vnd.github.v3+json',
-                            'User-Agent': 'Momentum-Shadow-Developer',
-                            'Authorization': `token ${process.env.GITHUB_TOKEN || ''}`
-                        }
-                    });
+                    const readmeRes = await fetch(`https://api.github.com/repos/${repoRef}/readme`, { headers });
                     if (readmeRes.ok) {
                         const readmeData = await readmeRes.json() as any;
                         const content = Buffer.from(readmeData.content, 'base64').toString('utf-8').slice(0, 2000); // Limit context
@@ -192,15 +221,67 @@ export class CoreEngine {
             }
 
             const chat = this.model.startChat({ tools: [{ functionDeclarations: this.getTools() as any }] });
-            const prompt = `Repository ${repoRef} is stagnant. \n\nContext:\n${context}\n\nPropose a high-impact improvement change now with researchRepo tool.`;
+            let prompt = `Repository ${repoRef} is stagnant. \n\nContext:\n${context}\n\nPropose a high-impact improvement change now. Start by researching the repo structure.`;
             researchSpan.update({ input: { prompt } });
 
-            const result = await chat.sendMessage(prompt);
-            const fc = result.response.candidates?.[0]?.content?.parts?.find((p: any) => (p as any).functionCall)?.functionCall;
+            let fc: any = null;
+            let iter = 0;
+            let currentMessage = prompt;
+
+            // Research Loop (Max 5 steps)
+            while (iter < 5) {
+                const result = await chat.sendMessage(currentMessage);
+                const part = result.response.candidates?.[0]?.content?.parts?.find((p: any) => p.functionCall);
+                fc = part?.functionCall;
+
+                if (!fc) break; // No more tool calls
+                if (fc.name === 'researchRepo') break; // Reached final goal
+
+                console.log(`[Core] Tool Call: ${fc.name}(${JSON.stringify(fc.args)})`);
+                let toolResult = 'Unknown tool error.';
+
+                try {
+                    if (fc.name === 'listFiles') {
+                        const pathArg = (fc.args as any).path || '';
+                        const res = await fetch(`https://api.github.com/repos/${repoRef}/contents/${pathArg}`, {
+                            headers: {
+                                'Accept': 'application/vnd.github.v3+json',
+                                'User-Agent': 'Momentum-Shadow-Developer',
+                                ...(process.env.GITHUB_TOKEN ? { 'Authorization': `token ${process.env.GITHUB_TOKEN}` } : {})
+                            }
+                        });
+                        const data = await res.json() as any;
+                        toolResult = Array.isArray(data)
+                            ? data.map((f: any) => `${f.type === 'dir' ? '[DIR]' : '[FILE]'} ${f.path}`).join('\n')
+                            : JSON.stringify(data);
+                    } else if (fc.name === 'getFile') {
+                        const pathArg = (fc.args as any).path;
+                        const res = await fetch(`https://api.github.com/repos/${repoRef}/contents/${pathArg}`, {
+                            headers: {
+                                'Accept': 'application/vnd.github.v3+json',
+                                'User-Agent': 'Momentum-Shadow-Developer',
+                                ...(process.env.GITHUB_TOKEN ? { 'Authorization': `token ${process.env.GITHUB_TOKEN}` } : {})
+                            }
+                        });
+                        const data = await res.json() as any;
+                        toolResult = Buffer.from(data.content, 'base64').toString('utf-8');
+                    }
+                } catch (err: any) {
+                    toolResult = `Error: ${err.message}`;
+                }
+
+                currentMessage = [{
+                    functionResponse: {
+                        name: fc.name,
+                        response: { content: toolResult }
+                    }
+                }] as any;
+                iter++;
+            }
 
             if (!fc || fc.name !== 'researchRepo') {
                 const err = 'Brain failed to generate a tool-based plan.';
-                researchSpan.update({ output: { error: err, text: result.response.text ? result.response.text() : '' } });
+                researchSpan.update({ output: { error: err, text: '' } });
                 researchSpan.end();
                 trace.update({ output: { status: 'FAILED', error: err } });
                 trace.end();
@@ -252,14 +333,18 @@ export class CoreEngine {
             const sTitle = proposal.title.replace(/"/g, "'");
             const sBody = `${proposal.body}\n\nProposed Change:\n\`\`\`\n${proposal.codeChange}\n\`\`\``.replace(/"/g, "'");
 
+            const headers: any = {
+                'Accept': 'application/vnd.github.v3+json',
+                'User-Agent': 'Momentum-Shadow-Developer'
+            };
+            if (process.env.GITHUB_TOKEN) {
+                headers['Authorization'] = `token ${process.env.GITHUB_TOKEN}`;
+            }
+
             console.log(`[Core] Creating Issue via API: ${proposal.repoRef}`);
             const response = await fetch(`https://api.github.com/repos/${proposal.repoRef}/issues`, {
                 method: 'POST',
-                headers: {
-                    'Accept': 'application/vnd.github.v3+json',
-                    'Authorization': `token ${process.env.GITHUB_TOKEN || ''}`,
-                    'User-Agent': 'Momentum-Shadow-Developer'
-                },
+                headers,
                 body: JSON.stringify({ title: sTitle, body: sBody })
             });
 
