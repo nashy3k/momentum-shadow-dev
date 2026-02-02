@@ -9,3 +9,9 @@ env:
     value: 22
   - variable: FIREBASE_PROJECT_ID
     value: momentum-shadow-dev-4321
+  - variable: AUTH_SECRET
+    secret: auth-secret
+  - variable: AUTH_GOOGLE_ID
+    secret: google-id
+  - variable: AUTH_GOOGLE_SECRET
+    secret: google-secret
