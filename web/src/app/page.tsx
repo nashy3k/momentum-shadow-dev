@@ -12,6 +12,8 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { db } from '@/lib/db';
+import { auth, signOut } from "@/auth";
+import { LogOut, User as UserIcon } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,6 +37,7 @@ async function getRepos() {
 }
 
 export default async function Dashboard() {
+  const session = await auth();
   const { data: repos, error } = await getRepos();
 
   const totalUnblocks = repos.reduce((acc, repo: any) => acc + (repo.unblocks || 0), 0);
@@ -62,6 +65,30 @@ export default async function Dashboard() {
             <Zap size={16} />
             <span>Agent Live</span>
           </div>
+
+          {session?.user && (
+            <div className="flex items-center gap-4 pl-4 border-l border-white/10">
+              <div className="flex items-center gap-2">
+                {session.user.image ? (
+                  <img src={session.user.image} alt="User" className="w-8 h-8 rounded-full border border-white/20" />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center border border-white/10">
+                    <UserIcon size={16} className="text-zinc-400" />
+                  </div>
+                )}
+                <div className="hidden sm:block">
+                  <p className="text-xs font-bold leading-none">{session.user.name}</p>
+                  <p className="text-[10px] text-zinc-500">{session.user.email}</p>
+                </div>
+              </div>
+
+              <form action={async () => { "use server"; await signOut(); }}>
+                <button type="submit" className="p-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-all text-zinc-400 hover:text-white border border-zinc-700">
+                  <LogOut size={16} />
+                </button>
+              </form>
+            </div>
+          )}
         </div>
       </header>
 
