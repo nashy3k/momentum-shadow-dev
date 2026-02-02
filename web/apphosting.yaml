@@ -4,6 +4,7 @@ runConfig:
   concurrency: 80
   cpu: 1
   memoryMiB: 512
+  maxInstances: 10
 env:
   - variable: NODE_VERSION
     value: 22
@@ -15,3 +16,7 @@ env:
     secret: google-id
   - variable: AUTH_GOOGLE_SECRET
     secret: google-secret
+  - variable: AUTH_TRUST_HOST
+    value: "true"
+  - variable: AUTH_URL
+    value: "https://momentum-dashboard--momentum-shadow-dev-4321.us-central1.hosted.app"
