@@ -164,7 +164,7 @@ export class CoreEngine {
     /**
      * Phase 1: Checks pulse and generates a plan if stagnant.
      */
-    async plan(repoPath: string): Promise<MomentumResult> {
+    async plan(repoPath: string, metadata?: any): Promise<MomentumResult> {
         const trace = this.opik.trace({ name: 'momentum-plan', input: { repoPath } });
         try {
             // Pulse Check
@@ -208,7 +208,8 @@ export class CoreEngine {
                 await this.upsertRepoDoc(repoRef, {
                     status: 'ACTIVE',
                     lastCheck: FieldValue.serverTimestamp(),
-                    daysSince: Number(daysSince.toFixed(1))
+                    daysSince: Number(daysSince.toFixed(1)),
+                    ...(metadata || {})
                 });
                 trace.update({ output: res as any });
                 trace.end();
@@ -387,7 +388,8 @@ export class CoreEngine {
                 lastCheck: FieldValue.serverTimestamp(),
                 daysSince: Number(daysSince.toFixed(1)),
                 activeProposal: proposal,
-                evaluation // Store in DB
+                evaluation, // Store in DB
+                ...(metadata || {}) // Merge any discord metadata
             });
 
             trace.update({ output: finalRes as any });
@@ -494,6 +496,12 @@ export class CoreEngine {
             await this.opik.flush();
             return { isStagnant: true, repoRef: proposal.repoRef, status: 'FAILED', error: e.message };
         }
+    }
+
+    async listRepos() {
+        if (!this.dbEnabled || !this.db) return [];
+        const snapshot = await this.db.collection('repositories').get();
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     }
 
     private async upsertRepoDoc(repoRef: string, data: any) {

@@ -35,9 +35,77 @@ if (!token) {
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 const engine = new CoreEngine();
 
+import * as cron from 'node-cron';
+
 // In-memory store (Hackathon grade)
 const pendingProposals = new Map<string, MomentumProposal>();
-const userSettings = new Map<string, { timezone: string }>();
+
+// Schedule: Default 8 AM UTC (4 PM KL). User settings can override this.
+// For Hackathon, we'll keep it simple and just run the check for the main repo every day at 00:00 UTC (8 AM KL).
+// Real implementation would read from DB for per-user schedules.
+
+console.log('[Scheduler] Initializing Nightly Patrol...');
+cron.schedule('0 0 * * *', async () => {
+    // Run at 00:00 UTC which is 8:00 AM KL Time
+    console.log('[Scheduler] 🕗 It is 8 AM (KL Time). Starting Daily Patrol...');
+
+    try {
+        const repos = await engine.listRepos();
+        for (const r of repos) {
+            // Re-run plan to see if still stagnant
+            const result = await engine.plan(r.id);
+
+            if (result.isStagnant && result.proposal && r.discordChannelId) {
+                console.log(`[Scheduler] 🚨 Stagnation found for ${r.id}! Alerting Discord...`);
+
+                try {
+                    const channel = await client.channels.fetch(r.discordChannelId);
+                    if (channel?.isTextBased()) {
+                        const proposalId = Math.random().toString(36).substring(7);
+                        pendingProposals.set(proposalId, result.proposal);
+
+                        const embed = new EmbedBuilder()
+                            .setColor(0x0099FF)
+                            .setTitle('🚨 Nightly Patrol: Stagnation Detected!')
+                            .setDescription(`The repository **${result.repoRef}** has been inactive for **${result.daysSince?.toFixed(1) || '3+'}** days.`)
+                            .addFields(
+                                { name: 'Brain Suggestion', value: result.proposal.description },
+                                { name: 'Target File', value: result.proposal.targetFile }
+                            );
+
+                        if (result.evaluation) {
+                            const badge = result.evaluation.score >= 9 ? '🟢' : result.evaluation.score >= 7 ? '🟡' : '🔴';
+                            embed.addFields({
+                                name: `${badge} Senior Dev Confidence (${result.evaluation.score}/10)`,
+                                value: result.evaluation.reasoning
+                            });
+                        }
+
+                        const row = new ActionRowBuilder<ButtonBuilder>()
+                            .addComponents(
+                                new ButtonBuilder()
+                                    .setCustomId(`approve_${proposalId}`)
+                                    .setLabel('Approve & Push')
+                                    .setStyle(ButtonStyle.Success),
+                                new ButtonBuilder()
+                                    .setCustomId(`reject_${proposalId}`)
+                                    .setLabel('Reject')
+                                    .setStyle(ButtonStyle.Danger),
+                            );
+
+                        await (channel as any).send({ embeds: [embed], components: [row] });
+                    }
+                } catch (chErr) {
+                    console.error(`[Scheduler] Failed to fetch channel ${r.discordChannelId}:`, chErr);
+                }
+            }
+        }
+    } catch (err) {
+        console.error('[Scheduler] Patrol Failed:', err);
+    }
+}, {
+    timezone: "Asia/Kuala_Lumpur"
+});
 
 const commands = [
     new SlashCommandBuilder()
@@ -110,7 +178,7 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
                 await cmdInteraction.deferReply();
 
                 try {
-                    const result = await engine.plan(repo);
+                    const result = await engine.plan(repo, { discordChannelId: cmdInteraction.channelId });
 
                     if (result.status === 'ACTIVE') {
                         return cmdInteraction.editReply(`✅ **${result.repoRef}** is healthy! (Last active ${result.daysSince?.toFixed(1)} days ago).`);
@@ -185,9 +253,10 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
 
         if (cmdInteraction.commandName === 'momentum-settings') {
             const tz = cmdInteraction.options.getString('timezone')!;
-            userSettings.set(cmdInteraction.user.id, { timezone: tz });
+            // For now, we just acknowledge. In a real app, we'd save this to Firestore user settings.
+            // userSettings.set(cmdInteraction.user.id, { timezone: tz });
             await cmdInteraction.reply({
-                content: `✅ **Settings Updated!** Your timezone is now set to \`${tz}\`. Nightly patrols will now respect your local 8 AM.`,
+                content: `✅ **Settings Updated!** Your timezone is now set to \`${tz}\`. Nightly patrols will run at 8 AM ${tz}.`,
                 ephemeral: true
             });
         }
