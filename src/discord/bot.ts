@@ -1,3 +1,6 @@
+import * as dotenv from 'dotenv';
+dotenv.config({ override: true });
+
 import {
     Client,
     GatewayIntentBits,
@@ -13,15 +16,13 @@ import {
     type ChatInputCommandInteraction,
     type ButtonInteraction
 } from 'discord.js';
-import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
 import { CoreEngine } from '../core/engine.js';
 import type { MomentumProposal } from '../core/engine.js';
 
 // Load .env
-const envPath = path.resolve(process.cwd(), '.env');
-dotenv.config({ path: envPath });
+// Redundant config removed as it's handled at top with override: true
 
 const token = process.env.DISCORD_TOKEN;
 const clientId = '1464207508603408404'; // From user's input

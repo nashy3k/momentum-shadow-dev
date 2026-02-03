@@ -8,8 +8,8 @@ import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore, FieldValue, Firestore } from 'firebase-admin/firestore';
 
-// Load environment variables
-dotenv.config();
+// Load environment variables (FORCE OVERRIDE stale shell variables)
+dotenv.config({ override: true });
 
 // Initialize Genkit
 const ai = genkit({});
@@ -96,7 +96,12 @@ export class CoreEngine {
             this.dbEnabled = false;
         }
 
-        const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || '');
+        // Safety Diagnostic (verify tokens are actually loaded)
+        const ghToken = process.env.GITHUB_TOKEN || '';
+        const googleKey = process.env.GOOGLE_API_KEY || '';
+        console.log(`[Core] Identity Check: GH_TOKEN (...${ghToken.slice(-4)}) | GOOGLE_KEY (...${googleKey.slice(-4)})`);
+
+        const genAI = new GoogleGenerativeAI(googleKey);
         this.model = genAI.getGenerativeModel({
             model: 'gemini-3-flash-preview', // Reverted to the working 3.0 model
             systemInstruction: 'You are Momentum, a Shadow Developer agent. Your purpose is to unblock stagnant repositories with high-quality, actionable code changes. \n' +
