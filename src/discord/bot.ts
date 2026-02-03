@@ -130,8 +130,16 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
                             .addFields(
                                 { name: 'Brain Suggestion', value: result.proposal.description },
                                 { name: 'Target File', value: result.proposal.targetFile }
-                            )
-                            .setFooter({ text: 'Momentum Shadow Developer • Gemini 3 Flash' })
+                            );
+
+                        if (result.evaluation) {
+                            const badge = result.evaluation.score >= 9 ? '🟢' : result.evaluation.score >= 7 ? '🟡' : '🔴';
+                            embed.addFields({
+                                name: `${badge} Senior Dev Confidence (${result.evaluation.score}/10)`,
+                                value: result.evaluation.reasoning
+                            });
+                        }
+                        embed.setFooter({ text: 'Momentum Shadow Developer • Gemini 3 Flash' })
                             .setTimestamp();
 
                         const row = new ActionRowBuilder<ButtonBuilder>()

@@ -33,10 +33,18 @@ export interface MomentumResult {
     issueUrl?: string;
     status: 'ACTIVE' | 'STAGNANT_PLANNING' | 'COMPLETE' | 'FAILED';
     error?: string;
+    evaluation?: EvaluationResult;
+}
+
+export interface EvaluationResult {
+    score: number; // 1-10
+    reasoning: string;
+    isSafe: boolean;
 }
 
 export class CoreEngine {
     private model: any;
+    private evaluator: any;
     private opik: Opik;
     private db: Firestore | null = null;
     private dbEnabled: boolean = true;
@@ -96,6 +104,16 @@ export class CoreEngine {
                 '2. ALWAYS read the content of relevant files (package.json, README, or source files) before proposing a change.\n' +
                 '3. Propose a change that actually improves the repo (e.g., adding a test, fixing a bug, updating a dependency, adding a feature).\n' +
                 '4. ONLY call researchRepo when you have a specific, high-quality code change to propose.'
+        });
+
+        this.evaluator = genAI.getGenerativeModel({
+            model: 'gemini-3-flash-preview',
+            systemInstruction: 'You are the Senior Software Architect. Your job is to EVALUATE code proposals from a junior developer.\n' +
+                'Rubric:\n' +
+                '1. Safety: Does this code delete data or break the build? (Fail if unsafe)\n' +
+                '2. Relevance: Does it actually fix the described stagnation/issue?\n' +
+                '3. Quality: Is the code idiomatic and correct?\n' +
+                'Output JSON: { "score": number (1-10), "reasoning": string, "isSafe": boolean }'
         });
     }
 
@@ -235,10 +253,35 @@ export class CoreEngine {
                 fc = part?.functionCall;
 
                 if (!fc) break; // No more tool calls
-                if (fc.name === 'researchRepo') break; // Reached final goal
 
-                console.log(`[Core] Tool Call: ${fc.name}(${JSON.stringify(fc.args)})`);
                 let toolResult = 'Unknown tool error.';
+
+                // INTERCEPT: If the bot wants to propose a fix, we evaluate it first ("Senior Dev Gatekeeper")
+                if (fc.name === 'researchRepo') {
+                    console.log('[Core] Junior Dev proposed a change. Evaluating...');
+                    const proposalArgs = fc.args as any;
+
+                    // Call Evaluation
+                    const evalResult = await this.evaluateProposal(proposalArgs, context);
+                    console.log(`[Core] Evaluation Result: Score ${evalResult.score}/10. Safe: ${evalResult.isSafe}`);
+
+                    if (evalResult.score >= 7 && evalResult.isSafe) {
+                        // PASS: We break the loop and accept this proposal
+                        console.log('[Core] Proposal APPROVED by Senior Dev.');
+                        // Attach evaluation to the final result
+                        (proposalArgs as any)._evaluation = evalResult;
+                        break;
+                    } else {
+                        // FAIL: We reject and force the bot to retry
+                        console.warn(`[Core] Proposal REJECTED. Reasoning: ${evalResult.reasoning}`);
+                        const rejectionMsg = `Senior Dev Assessment (REJECTED): Score ${evalResult.score}/10.\nReasoning: ${evalResult.reasoning}\n\nPlease analyze the repo deeper (use listFiles/getFile) and propose a BETTER fix.`;
+
+                        toolResult = rejectionMsg;
+                        // We do NOT break, we let the loop continue with this feedback
+                    }
+                } else {
+                    console.log(`[Core] Tool Call: ${fc.name}(${JSON.stringify(fc.args)})`);
+                }
 
                 try {
                     if (fc.name === 'listFiles') {
@@ -267,7 +310,14 @@ export class CoreEngine {
                         toolResult = Buffer.from(data.content, 'base64').toString('utf-8');
                     }
                 } catch (err: any) {
-                    toolResult = `Error: ${err.message}`;
+                    // Only overwrite toolResult if it wasn't already set by the rejection logic
+                    // But wait, rejection logic is for 'researchRepo', which falls through here?
+                    // 'researchRepo' is NOT 'listFiles' or 'getFile', so the if/else if above will skip.
+                    // But toolResult is already set.
+                    // If an error happens in listFiles/getFile, we capture it.
+                    if (fc.name !== 'researchRepo') {
+                        toolResult = `Error: ${err.message}`;
+                    }
                 }
 
                 console.log(`[Core] Tool Result: ${toolResult.slice(0, 100)}...`);
@@ -301,15 +351,24 @@ export class CoreEngine {
                 body: `Automated improvement proposed to unblock development.\nTarget File: ${plan.targetFile}`
             };
 
-            researchSpan.update({ output: { proposal } });
+            const evaluation = (plan as any)._evaluation;
+            researchSpan.update({ output: { proposal, evaluation } });
             researchSpan.end();
-            const finalRes: MomentumResult = { isStagnant: true, repoRef, daysSince, proposal, status: 'STAGNANT_PLANNING' };
+            const finalRes: MomentumResult = {
+                isStagnant: true,
+                repoRef,
+                daysSince,
+                proposal,
+                status: 'STAGNANT_PLANNING',
+                evaluation // Pass to result
+            };
 
             await this.upsertRepoDoc(repoRef, {
                 status: 'STAGNANT_PLANNING',
                 lastCheck: FieldValue.serverTimestamp(),
                 daysSince: Number(daysSince.toFixed(1)),
-                activeProposal: proposal
+                activeProposal: proposal,
+                evaluation // Store in DB
             });
 
             trace.update({ output: finalRes as any });
@@ -323,6 +382,36 @@ export class CoreEngine {
             trace.end();
             await this.opik.flush();
             return { isStagnant: false, repoRef: repoPath, status: 'FAILED', error: e.message };
+        }
+    }
+
+    private async evaluateProposal(proposal: any, context: string): Promise<EvaluationResult> {
+        const evalTrace = this.opik.trace({ name: 'momentum-evaluate' });
+        try {
+            const prompt = `EVALUATE this proposal based on the rubric.\n\nContext:\n${context}\n\nProposal:\nFile: ${proposal.targetFile}\nDescription: ${proposal.description}\nCode Change:\n${proposal.codeChange}`;
+
+            const result = await this.evaluator.generateContent(prompt);
+            const text = result.response.text();
+
+            // Clean markdown syntax if present
+            const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+            const data = JSON.parse(cleanText);
+
+            const resultObj: EvaluationResult = {
+                score: data.score || 0,
+                reasoning: data.reasoning || 'No reasoning provided.',
+                isSafe: data.isSafe ?? false
+            };
+
+            evalTrace.update({ input: { prompt }, output: resultObj as any });
+            evalTrace.end();
+            return resultObj;
+        } catch (err) {
+            console.error('[Core] Evaluation failed:', err);
+            evalTrace.end();
+            // Fail-safe: If evaluation crashes, we default to "Safe but low score" to trigger retry? 
+            // Or just pass it? Let's be strict: Fail.
+            return { score: 0, reasoning: 'Evaluation crashed. System error.', isSafe: false };
         }
     }
 

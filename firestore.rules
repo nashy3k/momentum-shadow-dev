@@ -1,0 +1,10 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Momentum uses the Firebase Admin SDK (Server-Side) for all operations.
+    // Therefore, we DENY all client-side requests by default to ensure maximum security.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
