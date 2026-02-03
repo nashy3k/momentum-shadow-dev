@@ -178,15 +178,24 @@ export default async function Dashboard() {
                   <span className="text-zinc-500 text-xs flex items-center gap-1">
                     <CheckCircle2 className="w-3 h-3" /> Status: {repo.status}
                   </span>
+                  {repo.evaluation && (
+                    <span className="text-cyan-400 text-xs font-bold flex items-center gap-1 px-2 py-0.5 bg-cyan-500/10 border border-cyan-500/20 rounded">
+                      <ShieldCheck className="w-3 h-3" /> Confidence: {repo.evaluation.score * 10}%
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
 
             <div className="flex items-center gap-4">
-              {repo.activeProposal && (
+              {(repo.activeProposal || repo.lastProposal) && (
                 <div className="hidden lg:block mr-8 text-right max-w-xs">
-                  <span className="text-[10px] uppercase text-zinc-500 block mb-1">Latest Proposal</span>
-                  <span className="text-sm font-medium italic text-orange-200 line-clamp-1">"{repo.activeProposal.description}"</span>
+                  <span className="text-[10px] uppercase text-zinc-500 block mb-1">
+                    {repo.status === 'COMPLETE' ? 'Implemented Change' : 'Latest Proposal'}
+                  </span>
+                  <span className={`text-sm font-medium italic line-clamp-1 ${repo.status === 'COMPLETE' ? 'text-green-200' : 'text-orange-200'}`}>
+                    "{(repo.activeProposal || repo.lastProposal).description}"
+                  </span>
                 </div>
               )}
               <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">

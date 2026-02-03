@@ -473,7 +473,7 @@ export class CoreEngine {
                 status: 'COMPLETE',
                 lastCheck: FieldValue.serverTimestamp(),
                 issueUrl: url,
-                activeProposal: null // Clear it once done
+                lastProposal: proposal // Persist the proposal details
             });
 
             trace.update({ output: res as any });

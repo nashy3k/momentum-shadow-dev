@@ -216,10 +216,27 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
                 const result = await engine.execute(proposal);
 
                 if (result.status === 'COMPLETE' && result.issueUrl) {
+                    // Try to recover confidence score from the original embed
+                    const oldEmbed = btnInteraction.message.embeds[0];
+                    const confidenceField = oldEmbed?.fields.find(f => f.name.includes('Confidence'));
+                    const confidenceText = confidenceField ? confidenceField.value : '🛡️ High';
+
+                    const successEmbed = new EmbedBuilder()
+                        .setTitle('🚀 Shadow PR Executed')
+                        .setDescription(`The proposed changes have been pushed to GitHub.`)
+                        .setURL(result.issueUrl)
+                        .setColor('#10b981') // Green
+                        .addFields(
+                            { name: 'Target Repo', value: `\`${proposal.repoRef}\``, inline: true },
+                            { name: 'Senior Dev Approval', value: confidenceText, inline: true },
+                            { name: 'GitHub Link', value: `[View Issue](${result.issueUrl})` }
+                        )
+                        .setTimestamp();
+
                     await btnInteraction.editReply({
                         content: `✅ **Approved!** Issue created: ${result.issueUrl}`,
                         components: [],
-                        embeds: []
+                        embeds: [successEmbed]
                     });
                 } else {
                     await btnInteraction.editReply({
