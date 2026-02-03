@@ -306,8 +306,13 @@ export class CoreEngine {
                                 ...(process.env.GITHUB_TOKEN ? { 'Authorization': `token ${process.env.GITHUB_TOKEN}` } : {})
                             }
                         });
-                        const data = await res.json() as any;
-                        toolResult = Buffer.from(data.content, 'base64').toString('utf-8');
+
+                        if (!res.ok) {
+                            toolResult = `GitHub API Error: ${res.status} ${res.statusText}. Check your GITHUB_TOKEN.`;
+                        } else {
+                            const data = await res.json() as any;
+                            toolResult = Buffer.from(data.content, 'base64').toString('utf-8');
+                        }
                     }
                 } catch (err: any) {
                     // Only overwrite toolResult if it wasn't already set by the rejection logic
