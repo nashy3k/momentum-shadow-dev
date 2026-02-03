@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
-import { CoreEngine } from './core/engine';
+import { CoreEngine } from './core/engine.js';
 
 // Robust .env loading
 const envPath = path.resolve(process.cwd(), '.env');

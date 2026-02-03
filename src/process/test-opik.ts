@@ -17,8 +17,8 @@ console.log('API Key length:', process.env.OPIK_API_KEY?.length);
 
 const opik = new Opik({
     projectName: 'momentum-test',
-    apiKey: process.env.OPIK_API_KEY,
-    workspaceName: process.env.OPIK_WORKSPACE,
+    apiKey: process.env.OPIK_API_KEY || '',
+    workspaceName: process.env.OPIK_WORKSPACE || '',
     // Workaround for 401 identified in community Discord
     headers: {
         'Authorization': process.env.OPIK_API_KEY || '',
@@ -39,8 +39,10 @@ async function runTest() {
         input: { data: 123 }
     });
 
-    span.end({ output: { success: true } });
-    trace.end({ output: { result: 'ok' } });
+    span.update({ output: { success: true } });
+    span.end();
+    trace.update({ output: { result: 'ok' } });
+    trace.end();
 
     console.log('Flushing data...');
     try {
