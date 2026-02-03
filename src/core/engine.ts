@@ -341,9 +341,6 @@ export class CoreEngine {
                         response: { name: fc.name, content: { result: toolResult } }
                     }
                 }] as any;
-                // FREE TIER THROTTLE: Gemini 3 Flash has a strict 5 RPM limit.
-                console.log('[Core] Throttling for 15s to respect API Rate Limits...');
-                await new Promise(resolve => setTimeout(resolve, 15000));
 
                 iter++;
             }
