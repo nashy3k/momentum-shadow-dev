@@ -251,8 +251,8 @@ export class CoreEngine {
             let iter = 0;
             let currentMessage = prompt;
 
-            // Research Loop (Max 8 steps)
-            while (iter < 8) {
+            // Research Loop (Max 25 steps for deep research + retries)
+            while (iter < 25) {
                 const result = await chat.sendMessage(currentMessage);
                 const part = result.response.candidates?.[0]?.content?.parts?.find((p: any) => p.functionCall);
                 fc = part?.functionCall;
@@ -351,7 +351,7 @@ export class CoreEngine {
             }
 
             if (!fc || fc.name !== 'researchRepo') {
-                const err = 'Brain failed to generate a tool-based plan.';
+                const err = `Brain timed out after ${iter} steps without a final proposal.`;
                 researchSpan.update({ output: { error: err, text: '' } });
                 researchSpan.end();
                 trace.update({ output: { status: 'FAILED', error: err } });
