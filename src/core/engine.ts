@@ -498,10 +498,10 @@ export class CoreEngine {
         }
     }
 
-    async listRepos() {
+    async listRepos(): Promise<any[]> {
         if (!this.dbEnabled || !this.db) return [];
         const snapshot = await this.db.collection('repositories').get();
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
     }
 
     private async upsertRepoDoc(repoRef: string, data: any) {
