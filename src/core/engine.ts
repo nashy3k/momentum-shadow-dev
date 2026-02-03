@@ -293,10 +293,14 @@ export class CoreEngine {
                                 ...(process.env.GITHUB_TOKEN ? { 'Authorization': `token ${process.env.GITHUB_TOKEN}` } : {})
                             }
                         });
-                        const data = await res.json() as any;
-                        toolResult = Array.isArray(data)
-                            ? data.map((f: any) => `${f.type === 'dir' ? '[DIR]' : '[FILE]'} ${f.path}`).join('\n')
-                            : JSON.stringify(data);
+                        if (!res.ok) {
+                            toolResult = `GitHub API Error (listFiles): ${res.status} ${res.statusText}. Check GITHUB_TOKEN.`;
+                        } else {
+                            const data = await res.json() as any;
+                            toolResult = Array.isArray(data)
+                                ? data.map((f: any) => `${f.type === 'dir' ? '[DIR]' : '[FILE]'} ${f.path}`).join('\n')
+                                : JSON.stringify(data);
+                        }
                     } else if (fc.name === 'getFile') {
                         const pathArg = (fc.args as any).path;
                         const res = await fetch(`https://api.github.com/repos/${repoRef}/contents/${pathArg}`, {
