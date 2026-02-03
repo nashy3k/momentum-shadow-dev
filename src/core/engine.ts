@@ -312,10 +312,14 @@ export class CoreEngine {
                         });
 
                         if (!res.ok) {
-                            toolResult = `GitHub API Error: ${res.status} ${res.statusText}. Check your GITHUB_TOKEN.`;
+                            toolResult = `GitHub API Error (getFile): ${res.status} ${res.statusText}. Check GITHUB_TOKEN.`;
                         } else {
                             const data = await res.json() as any;
-                            toolResult = Buffer.from(data.content, 'base64').toString('utf-8');
+                            if (data && data.content) {
+                                toolResult = Buffer.from(data.content, 'base64').toString('utf-8');
+                            } else {
+                                toolResult = `Error: File content missing in GitHub response.`;
+                            }
                         }
                     }
                 } catch (err: any) {
