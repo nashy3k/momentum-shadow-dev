@@ -220,6 +220,9 @@ export class CoreEngine {
             checkSpan.update({ output: { isStagnant, daysSince, repoRef } });
             checkSpan.end();
 
+            // UPDATE TRACE TAGS: Associate this trace with the specific repo for filtering
+            trace.update({ tags: [`repo:${repoRef}`] });
+
             if (!isStagnant) {
                 const res: MomentumResult = { isStagnant: false, repoRef, daysSince, status: 'ACTIVE' };
                 await this.upsertRepoDoc(repoRef, {
@@ -475,7 +478,11 @@ export class CoreEngine {
      * Phase 2: Executes a previously generated plan.
      */
     async execute(proposal: MomentumProposal): Promise<MomentumResult> {
-        const trace = this.opik.trace({ name: 'momentum-execute', input: { proposal } });
+        const trace = this.opik.trace({
+            name: 'momentum-execute',
+            input: { proposal },
+            tags: [`repo:${proposal.repoRef}`]
+        });
         try {
             const sTitle = proposal.title.replace(/"/g, "'");
             const sBody = `${proposal.body}\n\nProposed Change:\n\`\`\`\n${proposal.codeChange}\n\`\`\``.replace(/"/g, "'");
