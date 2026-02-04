@@ -237,12 +237,12 @@ export default async function Dashboard() {
 
                 {repo.opikTraceId && (
                   <a
-                    href={`https://www.comet.com/opik/momentum/projects/019bea25-bafb-7307-a1e8-bb3b9e911468/traces?traces_filters=${encodeURIComponent(JSON.stringify([{ field: "tags", operator: "contains", value: `repo:${repo.repoRef}` }]))}`}
+                    href={`https://www.comet.com/opik/momentum/projects/019bea25-bafb-7307-a1e8-bb3b9e911468/traces?traces_filters=${encodeURIComponent(JSON.stringify([{ field: "tags", operator: "contains", value: `cycle:${repo.opikTraceId}` }]))}`}
                     target="_blank"
                     className="px-4 py-2 h-10 bg-cyan-900/30 border border-cyan-500/30 text-cyan-400 rounded-lg flex items-center gap-2 hover:bg-cyan-900/50 transition-all text-sm"
                   >
                     <Activity className="w-4 h-4" />
-                    View Brain History
+                    View Patrol Cycle
                   </a>
                 )}
 

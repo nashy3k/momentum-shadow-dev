@@ -74,9 +74,10 @@ The Evaluator doesn't just "look" at the code; it executes a strict **Reasoning 
 
 *   **Reflexion (Short-Term Learning)**: The "Junior Dev" automatically retries and fixes its own mistakes *before* alerting you, triggered by the Senior Dev's feedback.
 *   **Accuracy Pipeline**: Uses a Dual-Brain architecture to reduce hallucinations.
-*   **Observability**: Deep-linked **Comet Opik** traces for every AI decision.
-*   **24/7 Autonomous Patrol**: Hosted on **Zo Computer** for round-the-clock repository monitoring.
-*   **Maintenance Mode**: Low-cost metadata syncing via `/momentum debug`.
+*   **Dual-Brain Accuracy Pipeline**: Junior Dev (Flash 3) proposes, Senior Dev (Architect Persona) audits.
+*   **Cycle-Based Observability**: Groups Planning, Reasoning, and Execution traces into a single "Patrol Cycle" in Comet Opik.
+*   **Zo Computer Hosting**: 24/7 autonomous runtime environment.
+*   **Dynamic Dashboard**: Real-time status sync with **Google Firestore** persistence.
 *   **Interactive Dashboard**: Real-time fleet monitoring with "View Brain Trace" deep links.
 *   **Cloud Native**: Built on **Google Cloud Platform** and **Firebase/Firestore**.
 
