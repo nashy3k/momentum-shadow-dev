@@ -169,23 +169,31 @@ export class CoreEngine {
         try {
             // Pulse Check
             const checkSpan = trace.span({ name: 'pulse-check' });
-            console.log(`[Core] Pulse Check: ${repoPath}`);
-
-            // Detection Logic: Is it github.com or owner/repo format?
             const isRemote = repoPath.includes('github.com') || (!repoPath.startsWith('/') && !repoPath.startsWith('.') && repoPath.includes('/') && !repoPath.startsWith('C:'));
             let lastCommitTime = 0;
-            let repoRef = '';
-
-            const ghToken = process.env.GITHUB_TOKEN;
+            let repoRef = repoPath;
 
             if (isRemote) {
                 if (repoPath.includes('github.com')) {
                     const match = repoPath.match(/github\.com\/([^\\/]+\/[^\\/]+)/);
                     repoRef = (match && match[1]) ? match[1].replace(/\.git$/, '') : repoPath;
-                } else {
-                    repoRef = repoPath; // Already in owner/repo format
                 }
 
+                // Early Sync: Save the Discord Channel ID immediately so we don't lose it if AI fails later
+                if (metadata?.discordChannelId) {
+                    await this.upsertRepoDoc(repoRef, {
+                        discordChannelId: metadata.discordChannelId,
+                        lastCheck: FieldValue.serverTimestamp()
+                    });
+                }
+            } else {
+                repoRef = path.resolve(repoPath);
+            }
+
+            console.log(`[Core] Pulse Check: ${repoRef}`);
+            const ghToken = process.env.GITHUB_TOKEN;
+
+            if (isRemote) {
                 // Use native fetch instead of GH CLI for Cloud compatibility
                 console.log(`[Core] Fetching API: https://api.github.com/repos/${repoRef}`);
                 const response = await fetch(`https://api.github.com/repos/${repoRef}`, {
