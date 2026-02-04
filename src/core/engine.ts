@@ -311,7 +311,7 @@ export class CoreEngine {
                     const proposalArgs = fc.args as any;
 
                     // Call Evaluation
-                    const evalResult = await this.evaluateProposal(proposalArgs, context, trace);
+                    const evalResult = await this.evaluateProposal(proposalArgs, context, trace, cycleId);
                     console.log(`[Core] Evaluation Result: Score ${evalResult.score}/10. Safe: ${evalResult.isSafe}`);
 
                     if (evalResult.score >= 7 && evalResult.isSafe) {
@@ -450,8 +450,10 @@ export class CoreEngine {
         }
     }
 
-    private async evaluateProposal(proposal: any, context: string, parentTrace: any): Promise<EvaluationResult> {
+    private async evaluateProposal(proposal: any, context: string, parentTrace: any, cycleId: string): Promise<EvaluationResult> {
         const evalSpan = parentTrace.span({ name: 'momentum-evaluate', type: 'evaluate' });
+        // Force tag this span in case it is promoted to a Trace
+        evalSpan.update({ tags: [`cycle:${cycleId}`] });
         let prompt = '';
         try {
             prompt = `EVALUATE this proposal based on the rubric.\n\nContext:\n${context}\n\nProposal:\nFile: ${proposal.targetFile}\nDescription: ${proposal.description}\nCode Change:\n${proposal.codeChange}`;
