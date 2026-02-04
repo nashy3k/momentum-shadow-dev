@@ -191,9 +191,9 @@ export default async function Dashboard() {
               {(repo.activeProposal || repo.lastProposal) && (
                 <div className="hidden lg:block mr-8 text-right max-w-xs">
                   <span className="text-[10px] uppercase text-zinc-500 block mb-1">
-                    {repo.status === 'COMPLETE' ? 'Implemented Change' : 'Latest Proposal'}
+                    {repo.status === 'COMPLETE' ? 'Issue Created' : 'Latest Proposal'}
                   </span>
-                  <span className={`text-sm font-medium italic line-clamp-1 ${repo.status === 'COMPLETE' ? 'text-green-200' : 'text-orange-200'}`}>
+                  <span className={`text-sm font-medium italic line-clamp-1 ${repo.status === 'COMPLETE' ? 'text-blue-200' : 'text-orange-200'}`}>
                     "{(repo.activeProposal || repo.lastProposal).description}"
                   </span>
                 </div>
