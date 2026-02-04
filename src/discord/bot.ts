@@ -45,10 +45,15 @@ const pendingProposals = new Map<string, MomentumProposal>();
 // Real implementation would read from DB for per-user schedules.
 
 console.log('[Scheduler] Initializing Nightly Patrol...');
-cron.schedule('0 5 * * *', async () => {
-    // TEST RUN: 05:00 UTC -> 13:00 (1 PM) KL Time
-    console.log('[Scheduler] 🕐 It is 5 AM UTC (1 PM KL). Starting Test Patrol...');
+cron.schedule('10 5 * * *', async () => {
+    // TEST RUN: 05:10 UTC -> 13:10 (1:10 PM) KL Time
+    console.log('[Scheduler] 🕐 It is 5:10 AM UTC (1:10 PM KL). Starting Test Patrol...');
+    await runPatrol();
+}, {
+    timezone: "Asia/Kuala_Lumpur"
+});
 
+async function runPatrol() {
     try {
         const repos = await engine.listRepos();
         console.log(`[Scheduler] Found ${repos.length} tracked repositories.`);
@@ -104,14 +109,14 @@ cron.schedule('0 5 * * *', async () => {
                 } catch (chErr) {
                     console.error(`[Scheduler] Failed to fetch channel ${r.discordChannelId}:`, chErr);
                 }
+            } else {
+                console.log(`[Scheduler] Repository ${repoRef} is healthy or lacks channel info.`);
             }
         }
     } catch (err) {
         console.error('[Scheduler] Patrol Failed:', err);
     }
-}, {
-    timezone: "Asia/Kuala_Lumpur"
-});
+}
 
 const commands = [
     new SlashCommandBuilder()
@@ -131,6 +136,10 @@ const commands = [
             sub.setName('link')
                 .setDescription('Link your Discord ID to your Dashboard email')
                 .addStringOption(opt => opt.setName('email').setDescription('The email you use to login to the Dashboard').setRequired(true))
+        )
+        .addSubcommand(sub =>
+            sub.setName('patrol')
+                .setDescription('Manually trigger an 8 AM-style nightly patrol for all tracked repos')
         ),
     new SlashCommandBuilder()
         .setName('momentum-settings')
@@ -254,6 +263,10 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
                 } else {
                     await cmdInteraction.editReply(`❌ **Link Failed**: ${result.error || 'Unknown Error'}`);
                 }
+            } else if (subcommand === 'patrol') {
+                await cmdInteraction.deferReply({ ephemeral: true });
+                await cmdInteraction.editReply('🚀 **Manual Patrol Triggered.** Checking all tracked repositories for stagnation...');
+                await runPatrol();
             }
         }
 
