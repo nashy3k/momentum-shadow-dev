@@ -65,5 +65,5 @@ flowchart LR
     Engine --> Gemini[Gemini 3 Flash]
     Engine --> GitHub[GitHub API]
     Engine --> DB[(Google Firestore)]
-    Dashboard[Firebase Hosting (Next.js)] --> DB
+    Dashboard["Firebase Hosting (Next.js)"] --> DB
 ```
