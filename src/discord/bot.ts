@@ -45,9 +45,9 @@ const pendingProposals = new Map<string, MomentumProposal>();
 // Real implementation would read from DB for per-user schedules.
 
 console.log('[Scheduler] Initializing Nightly Patrol...');
-cron.schedule('0 8 * * *', async () => {
-    // Run at 8:00 AM KL Time
-    console.log('[Scheduler] 🕗 It is 8 AM (KL Time). Starting Daily Patrol...');
+cron.schedule('0 0 * * *', async () => {
+    // Run at 00:00 UTC -> 8:00 AM KL Time (since server is UTC)
+    console.log('[Scheduler] 🕗 It is Midnight UTC (8 AM KL). Starting Daily Patrol...');
 
     try {
         const repos = await engine.listRepos();
