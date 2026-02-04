@@ -132,7 +132,9 @@ export default async function Dashboard() {
       {/* Hero Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
         <div className="glass-card p-6 flex flex-col gap-2">
-          <span className="text-zinc-400 text-sm font-medium">Total Unblocks</span>
+          <Tooltip text="Cumulative Issues Created (Stagnation Unblocked)">
+            <span className="text-zinc-400 text-sm font-medium border-b border-dashed border-zinc-700">Total Unblocks</span>
+          </Tooltip>
           <div className="text-4xl font-bold">{totalUnblocks}</div>
           <div className="text-green-500 text-xs flex items-center gap-1">
             <Zap className="w-3 h-3" /> Live from Firestore
