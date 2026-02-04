@@ -171,20 +171,28 @@ export class CoreEngine {
             const checkSpan = trace.span({ name: 'pulse-check' });
             console.log(`[Core] Pulse Check: ${repoPath}`);
 
-            const isRemote = repoPath.includes('github.com');
+            // Detection Logic: Is it github.com or owner/repo format?
+            const isRemote = repoPath.includes('github.com') || (!repoPath.startsWith('/') && !repoPath.startsWith('.') && repoPath.includes('/') && !repoPath.startsWith('C:'));
             let lastCommitTime = 0;
             let repoRef = '';
 
+            const ghToken = process.env.GITHUB_TOKEN;
+
             if (isRemote) {
-                const match = repoPath.match(/github\.com\/([^\\/]+\/[^\\/]+)/);
-                repoRef = (match && match[1]) ? match[1].replace(/\.git$/, '') : repoPath;
+                if (repoPath.includes('github.com')) {
+                    const match = repoPath.match(/github\.com\/([^\\/]+\/[^\\/]+)/);
+                    repoRef = (match && match[1]) ? match[1].replace(/\.git$/, '') : repoPath;
+                } else {
+                    repoRef = repoPath; // Already in owner/repo format
+                }
 
                 // Use native fetch instead of GH CLI for Cloud compatibility
                 console.log(`[Core] Fetching API: https://api.github.com/repos/${repoRef}`);
                 const response = await fetch(`https://api.github.com/repos/${repoRef}`, {
                     headers: {
                         'Accept': 'application/vnd.github.v3+json',
-                        'User-Agent': 'Momentum-Shadow-Developer'
+                        'User-Agent': 'Momentum-Shadow-Developer',
+                        ...(ghToken ? { 'Authorization': `token ${ghToken}` } : {})
                     }
                 });
 
