@@ -65,14 +65,15 @@ graph TD
 ```
 
 ### The Senior Dev's Rubric
-The Evaluator doesn't just "look" at the code; it executes a strict **Reasoning Trace** based on:
+The Evaluator doesn't just "look" at the code; it executes a strict **Reasoning Trace** (visible in **Opik** as the `momentum-evaluate` span) based on:
 1.  **Safety**: Checks for `rm -rf`, secrets exposure, and dangerous imports.
 2.  **Relevance**: Does the code change match the file context?
 3.  **Correctness**: Scans for hallucinated syntax or logical errors.
 
 ## 🚀 Key Features
 
-*   **Accuracy Pipeline**: Uses Gemini 3 Flash in a "Generator-Evaluator" loop to self-correct hallucinations.
+*   **Reflexion (Short-Term Learning)**: The "Junior Dev" automatically retries and fixes its own mistakes *before* alerting you, triggered by the Senior Dev's feedback.
+*   **Accuracy Pipeline**: Uses a Dual-Brain architecture to reduce hallucinations.
 *   **Observability**: Deep-linked **Comet Opik** traces for every AI decision.
 *   **24/7 Autonomous Patrol**: Hosted on **Zo Computer** for round-the-clock repository monitoring.
 *   **Maintenance Mode**: Low-cost metadata syncing via `/momentum debug`.
