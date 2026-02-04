@@ -45,12 +45,10 @@ const pendingProposals = new Map<string, MomentumProposal>();
 // Real implementation would read from DB for per-user schedules.
 
 console.log('[Scheduler] Initializing Nightly Patrol...');
-cron.schedule('55 5 * * *', async () => {
-    // FINAL TEST: 05:55 UTC -> 13:55 (1:55 PM) KL Time
-    console.log('[Scheduler] 🕐 It is 5:55 AM UTC (1:55 PM KL). Starting Final Test Patrol...');
+cron.schedule('0 0 * * *', async () => {
+    // Run at 00:00 UTC -> 8:00 AM KL Time (Zo Server Time is UTC)
+    console.log('[Scheduler] 🕗 It is Midnight UTC (8 AM KL). Starting Daily Patrol...');
     await runPatrol();
-}, {
-    timezone: "Asia/Kuala_Lumpur"
 });
 
 async function runPatrol() {
