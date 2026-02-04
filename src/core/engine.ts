@@ -23,6 +23,7 @@ export interface MomentumProposal {
     codeChange: string;
     title: string;
     body: string;
+    originTraceId?: string; // Link to the planning trace
 }
 
 export interface MomentumResult {
@@ -166,6 +167,10 @@ export class CoreEngine {
      */
     async plan(repoPath: string, metadata?: any, options?: { maintenanceOnly?: boolean }): Promise<MomentumResult> {
         const trace = this.opik.trace({ name: options?.maintenanceOnly ? 'momentum-maintenance' : 'momentum-plan', input: { repoPath } });
+
+        // CYCLE TAGGING: Use this trace ID as the unique Cycle ID to link Plan and Execute phases
+        const cycleId = trace.data.id;
+        trace.update({ tags: [`repo:${repoPath}`, `cycle:${cycleId}`] });
         try {
             // Pulse Check
             const checkSpan = trace.span({ name: 'pulse-check' });
@@ -406,7 +411,8 @@ export class CoreEngine {
                 description: plan.description,
                 codeChange: plan.codeChange,
                 title: `Momentum: ${plan.description}`,
-                body: `Automated improvement proposed to unblock development.\nTarget File: ${plan.targetFile}`
+                body: `Automated improvement proposed to unblock development.\nTarget File: ${plan.targetFile}`,
+                originTraceId: cycleId // Pass the cycle ID to the proposal
             };
 
             const evaluation = (plan as any)._evaluation;
@@ -446,8 +452,9 @@ export class CoreEngine {
 
     private async evaluateProposal(proposal: any, context: string, parentTrace: any): Promise<EvaluationResult> {
         const evalSpan = parentTrace.span({ name: 'momentum-evaluate', type: 'evaluate' });
+        let prompt = '';
         try {
-            const prompt = `EVALUATE this proposal based on the rubric.\n\nContext:\n${context}\n\nProposal:\nFile: ${proposal.targetFile}\nDescription: ${proposal.description}\nCode Change:\n${proposal.codeChange}`;
+            prompt = `EVALUATE this proposal based on the rubric.\n\nContext:\n${context}\n\nProposal:\nFile: ${proposal.targetFile}\nDescription: ${proposal.description}\nCode Change:\n${proposal.codeChange}`;
 
             const result = await this.evaluator.generateContent(prompt);
             const text = result.response.text();
@@ -465,12 +472,15 @@ export class CoreEngine {
             evalSpan.update({ input: { prompt }, output: resultObj as any });
             evalSpan.end();
             return resultObj;
-        } catch (err) {
+        } catch (err: any) {
             console.error('[Core] Evaluation failed:', err);
+            // Capture the failure in the span so it's not "empty"
+            evalSpan.update({
+                input: { prompt: prompt || 'Prompt generation failed.' },
+                output: { error: err.message, score: 0 }
+            });
             evalSpan.end();
-            // Fail-safe: If evaluation crashes, we default to "Safe but low score" to trigger retry? 
-            // Or just pass it? Let's be strict: Fail.
-            return { score: 0, reasoning: 'Evaluation crashed. System error.', isSafe: false };
+            return { score: 0, reasoning: `Evaluation crashed: ${err.message}`, isSafe: false };
         }
     }
 
@@ -478,10 +488,13 @@ export class CoreEngine {
      * Phase 2: Executes a previously generated plan.
      */
     async execute(proposal: MomentumProposal): Promise<MomentumResult> {
+        const tags = [`repo:${proposal.repoRef}`];
+        if (proposal.originTraceId) tags.push(`cycle:${proposal.originTraceId}`);
+
         const trace = this.opik.trace({
             name: 'momentum-execute',
             input: { proposal },
-            tags: [`repo:${proposal.repoRef}`]
+            tags
         });
         try {
             const sTitle = proposal.title.replace(/"/g, "'");
