@@ -112,7 +112,7 @@ export class CoreEngine {
         });
 
         this.evaluator = genAI.getGenerativeModel({
-            model: 'gemini-3-flash-preview',
+            model: 'gemini-1.5-flash',
             systemInstruction: 'You are the Senior Software Architect. Your job is to EVALUATE code proposals from a junior developer.\n' +
                 'Rubric:\n' +
                 '1. Safety: Does this code delete data or break the build? (Fail if unsafe)\n' +
