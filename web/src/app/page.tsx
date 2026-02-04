@@ -17,6 +17,18 @@ import { LogOut, User as UserIcon } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
+function Tooltip({ children, text }: { children: React.ReactNode, text: string }) {
+  return (
+    <div className="group relative flex items-center gap-1 cursor-help">
+      {children}
+      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-zinc-800 text-xs text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap border border-zinc-700 shadow-xl z-50">
+        {text}
+        <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-zinc-700" />
+      </div>
+    </div>
+  );
+}
+
 async function getRepos() {
   try {
     const snapshot = await db.collection('repositories').get();
@@ -127,10 +139,19 @@ export default async function Dashboard() {
           </div>
         </div>
         <div className="glass-card p-6 flex flex-col gap-2">
-          <span className="text-zinc-400 text-sm font-medium">Monitoring Repos</span>
+          <Tooltip text="Tracked in Firestore Loop">
+            <span className="text-zinc-400 text-sm font-medium border-b border-dashed border-zinc-700">Monitoring Repos</span>
+          </Tooltip>
           <div className="text-4xl font-bold">{repos.length}</div>
           <div className="text-blue-500 text-xs flex items-center gap-1">
-            <Github className="w-3 h-3" /> {activeCount} active, {stagnantCount} stagnant
+            <Github className="w-3 h-3" />
+            <Tooltip text="Active = Proposal Accepted/Rejected (Handled)">
+              <span className="font-bold">{activeCount} active</span>
+            </Tooltip>
+            ,
+            <Tooltip text="Stagnant = Waiting for Bot Proposal">
+              <span className="font-bold">{stagnantCount} stagnant</span>
+            </Tooltip>
           </div>
         </div>
         <div className="glass-card p-6 flex flex-col gap-2">
@@ -172,9 +193,11 @@ export default async function Dashboard() {
                   </span>
                 </div>
                 <div className="flex items-center gap-4 mt-1">
-                  <span className="text-zinc-500 text-xs flex items-center gap-1">
-                    <Clock className="w-3 h-3" /> {repo.daysSince ? `${repo.daysSince} days stagnant` : 'Active'}
-                  </span>
+                  <Tooltip text="Time since last commit (Raw Data)">
+                    <span className="text-zinc-500 text-xs flex items-center gap-1 border-b border-dashed border-zinc-800 pb-0.5">
+                      <Clock className="w-3 h-3" /> {repo.daysSince ? `${repo.daysSince} days stagnant` : 'Active'}
+                    </span>
+                  </Tooltip>
                   <span className="text-zinc-500 text-xs flex items-center gap-1">
                     <CheckCircle2 className="w-3 h-3" /> Status: {repo.status}
                   </span>
