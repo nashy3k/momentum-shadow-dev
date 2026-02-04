@@ -184,7 +184,7 @@ export class CoreEngine {
                     await this.upsertRepoDoc(repoRef, {
                         discordChannelId: metadata.discordChannelId,
                         lastCheck: FieldValue.serverTimestamp(),
-                        opikTraceId: trace.id // Link the trace immediately
+                        opikTraceId: trace.data.id // Link the trace immediately
                     });
                 }
             } else {
