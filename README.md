@@ -158,3 +158,12 @@ flowchart LR
     Engine --> DB[(Google Firestore)]
     Dashboard["Firebase Hosting (Next.js)"] --> DB
 ```
+
+## 🔮 Future Roadmap (The "Evolution" Phase)
+
+*   **Self-Reinforcement**: Feed accepted/rejected "Shadow PR" data back into the Brain to teach it your specific coding style over time.
+*   **Multi-Repo Awareness**: Allow the bot to see "how we did it in the other repo" to solve cross-project dependency issues.
+
+## 📜 License
+
+MIT
