@@ -491,7 +491,8 @@ export class CoreEngine {
                 status: 'COMPLETE',
                 lastCheck: FieldValue.serverTimestamp(),
                 issueUrl: url,
-                lastProposal: proposal // Persist the proposal details
+                lastProposal: proposal, // Persist the proposal details
+                unblocks: FieldValue.increment(1) // Track the win
             });
 
             trace.update({ output: res as any });
