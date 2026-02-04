@@ -109,8 +109,11 @@ async function runPatrol() {
                 } catch (chErr) {
                     console.error(`[Scheduler] Failed to fetch channel ${r.discordChannelId}:`, chErr);
                 }
+            } else if (result.status === 'FAILED') {
+                console.error(`[Scheduler] ❌ System Error for ${repoRef}: ${result.error}`);
             } else {
-                console.log(`[Scheduler] Repository ${repoRef} is healthy or lacks channel info.`);
+                console.log(`[Scheduler] Repository ${repoRef} is healthy (Last check: ${result.daysSince?.toFixed(1)} days ago).`);
+                if (!r.discordChannelId) console.warn(`[Scheduler] ⚠️ Missing discordChannelId for ${repoRef}. Run /momentum check to repair.`);
             }
         }
     } catch (err) {
