@@ -79,6 +79,21 @@ The Evaluator doesn't just "look" at the code; it executes a strict **Reasoning 
 *   **Interactive Dashboard**: Real-time fleet monitoring with "View Brain Trace" deep links.
 *   **Cloud Native**: Built on **Google Cloud Platform** and **Firebase/Firestore**.
 
+## 🔮 Professional Observability (Opik)
+
+Momentum is not a black box. Every decision is fully traceable using **Comet Opik**.
+
+### Tracing Hierarchy
+Each patrol cycle generates a structured trace linked directly to the repository:
+
+*   **`momentum-plan`** (Root): Tracks the overall latency (e.g., 24.5s) and cost.
+    *   **`pulse-check`** (Span): GitHub API overhead and stagnation logic.
+    *   **`brain-research`** (Span): The Junior Dev's iterative research tool calls (`listFiles`, `readFile`).
+    *   **`momentum-evaluate`** (Span): The Senior Dev's rubric evaluation and score.
+
+### Deep Linking
+The Dashboard provides a **"View Brain Trace"** button for every monitored repository. One click takes you from a "Status: Active" badge directly to the generative logic that produced it.
+
 ## 🛠️ Stack
 
 *   **Brain**: Google Gemini 3 Flash (via Genkit)
