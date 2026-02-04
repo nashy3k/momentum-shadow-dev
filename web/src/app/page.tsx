@@ -234,6 +234,18 @@ export default async function Dashboard() {
                     View Issue
                   </a>
                 )}
+
+                {repo.opikTraceId && (
+                  <a
+                    href={`https://www.comet.com/opik/momentum/projects/019bea25-bafb-7307-a1e8-bb3b9e911468/traces?traces_filters=${encodeURIComponent(JSON.stringify([{ field: "id", operator: "=", value: repo.opikTraceId }]))}`}
+                    target="_blank"
+                    className="px-4 py-2 h-10 bg-cyan-900/30 border border-cyan-500/30 text-cyan-400 rounded-lg flex items-center gap-2 hover:bg-cyan-900/50 transition-all text-sm"
+                  >
+                    <Activity className="w-4 h-4" />
+                    View Brain Trace
+                  </a>
+                )}
+
                 <a
                   href={repo.repoRef.startsWith('http') ? repo.repoRef : `https://github.com/${repo.repoRef}`}
                   target="_blank"
