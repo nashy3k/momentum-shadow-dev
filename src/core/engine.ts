@@ -183,7 +183,8 @@ export class CoreEngine {
                 if (metadata?.discordChannelId) {
                     await this.upsertRepoDoc(repoRef, {
                         discordChannelId: metadata.discordChannelId,
-                        lastCheck: FieldValue.serverTimestamp()
+                        lastCheck: FieldValue.serverTimestamp(),
+                        opikTraceId: trace.id // Link the trace immediately
                     });
                 }
             } else {
