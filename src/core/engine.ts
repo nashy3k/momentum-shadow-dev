@@ -242,7 +242,7 @@ export class CoreEngine {
                     status: 'STAGNANT_PLANNING',
                     lastCheck: FieldValue.serverTimestamp(),
                     daysSince: Number(daysSince.toFixed(1)),
-                    opikTraceId: trace.data.id,
+                    // Do NOT overwrite opikTraceId here. We want to keep the link to the actual "Brain" run.
                     ...(metadata || {})
                 });
                 trace.update({ output: res as any });
@@ -303,7 +303,7 @@ export class CoreEngine {
                     const proposalArgs = fc.args as any;
 
                     // Call Evaluation
-                    const evalResult = await this.evaluateProposal(proposalArgs, context);
+                    const evalResult = await this.evaluateProposal(proposalArgs, context, trace);
                     console.log(`[Core] Evaluation Result: Score ${evalResult.score}/10. Safe: ${evalResult.isSafe}`);
 
                     if (evalResult.score >= 7 && evalResult.isSafe) {
@@ -441,8 +441,8 @@ export class CoreEngine {
         }
     }
 
-    private async evaluateProposal(proposal: any, context: string): Promise<EvaluationResult> {
-        const evalTrace = this.opik.trace({ name: 'momentum-evaluate' });
+    private async evaluateProposal(proposal: any, context: string, parentTrace: any): Promise<EvaluationResult> {
+        const evalSpan = parentTrace.span({ name: 'momentum-evaluate', type: 'evaluate' });
         try {
             const prompt = `EVALUATE this proposal based on the rubric.\n\nContext:\n${context}\n\nProposal:\nFile: ${proposal.targetFile}\nDescription: ${proposal.description}\nCode Change:\n${proposal.codeChange}`;
 
@@ -459,12 +459,12 @@ export class CoreEngine {
                 isSafe: data.isSafe ?? false
             };
 
-            evalTrace.update({ input: { prompt }, output: resultObj as any });
-            evalTrace.end();
+            evalSpan.update({ input: { prompt }, output: resultObj as any });
+            evalSpan.end();
             return resultObj;
         } catch (err) {
             console.error('[Core] Evaluation failed:', err);
-            evalTrace.end();
+            evalSpan.end();
             // Fail-safe: If evaluation crashes, we default to "Safe but low score" to trigger retry? 
             // Or just pass it? Let's be strict: Fail.
             return { score: 0, reasoning: 'Evaluation crashed. System error.', isSafe: false };
