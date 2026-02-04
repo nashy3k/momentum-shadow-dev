@@ -8,20 +8,67 @@ Momentum is an autonomous AI agent that monitors your GitHub repositories for st
 
 ## 🧠 The Accuracy Pipeline
 
-Momentum uses a **Dual-Brain Architecture** to ensure production-grade proposals:
+Momentum uses a **Dual-Brain Architecture** to ensure production-grade proposals.
+
+### The "Same Model" Paradox
+"If both agents use Gemini 3 Flash, why is it better?"
+
+The answer lies in **Cognitive Load** and **Persona constraints**.
+
+| Feature | 🐣 Junior Dev (Generator) | 🧐 Senior Dev (Evaluator) |
+| :--- | :--- | :--- |
+| **System Prompt** | "You are a helpful, creative coder. Fix the problem." | "You are a strict, security-focused Architect. Find flaws." |
+| **Context Window** | Full of file contents, tool outputs, and noise. | Clean. Only sees the *Proposal* and the *Rubric*. |
+| **Goal** | **Recall & Synthesis** (Generate a solution). | **Classification & verification** (Grade a solution). |
+| **Temperature** | Needs creativity (0.7). | Needs determinism (0.1). |
+
+### The Workflow Loop
 
 ```mermaid
-flowchart TD
-    Start[Patrol Trigger] --> Check{Pulse Check}
-    Check -- Active --> Sync[Update Dashboard]
-    Check -- Stagnant --> Research[Junior Dev: Research Phase]
-    Research --> Gen[Propose Shadow PR]
-    Gen --> Eval[Senior Dev: Evaluation Phase]
-    Eval -- Score < 7 --> Research
-    Eval -- Score >= 7 --> Notify[Notify Discord]
-    Notify --> Approve{User Approval}
-    Approve -- Yes --> Push[Push Fix to GitHub]
+graph TD
+    UserEnd(("Patrol Trigger")) -->|Trigger| ZoHost["Zo Computer (24/7 Runtime)"]
+    ZoHost -->|Execute| Core[Core Engine]
+    
+    subgraph "Mode Select"
+        Core --> Mode{Mode?}
+        Mode -->|Debug| Sync[Pulse Sync Only]
+        Mode -->|Plan| Detect{Stagnant?}
+    end
+
+    subgraph "Junior Dev (Generation Phase)"
+        Detect -->|Yes| Research[Research Loop]
+        Research -->|"listFiles / getFile"| Repo[("GitHub Repository")]
+        Research -->|"Context Gathered"| Draft[Draft Proposal]
+    end
+
+    subgraph "Senior Dev (Evaluation Phase)"
+        Draft -->|"2. submit for review"| Evaluator[Gemini 3 Flash Evaluator]
+        Evaluator -->|"Check Rubric"| Score{"Score >= 7?"}
+    end
+
+    subgraph "Feedback Loop"
+        Score -->|"No"| Feedback["Generate Feedback"]
+        Feedback -->|"3. Retry with Context"| Research
+    end
+
+    subgraph "Action Phase"
+        Score -->|"Yes"| Discord[Discord Bot]
+        Sync -->|Update Metadata| DB[("Google Firestore")]
+        Discord -->|"4. Push Notification"| UserEnd
+    end
+
+    style Evaluator fill:#2d1b4e,stroke:#9d4edd,stroke-width:2px
+    style Research fill:#1a2e35,stroke:#26c6da
+    style Discord fill:#5865F2,color:white
+    style Sync fill:#4a4e69
+    style ZoHost fill:#f1c40f,color:black,stroke:#f39c12
 ```
+
+### The Senior Dev's Rubric
+The Evaluator doesn't just "look" at the code; it executes a strict **Reasoning Trace** based on:
+1.  **Safety**: Checks for `rm -rf`, secrets exposure, and dangerous imports.
+2.  **Relevance**: Does the code change match the file context?
+3.  **Correctness**: Scans for hallucinated syntax or logical errors.
 
 ## 🚀 Key Features
 
