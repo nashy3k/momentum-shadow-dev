@@ -164,8 +164,8 @@ export class CoreEngine {
     /**
      * Phase 1: Checks pulse and generates a plan if stagnant.
      */
-    async plan(repoPath: string, metadata?: any): Promise<MomentumResult> {
-        const trace = this.opik.trace({ name: 'momentum-plan', input: { repoPath } });
+    async plan(repoPath: string, metadata?: any, options?: { maintenanceOnly?: boolean }): Promise<MomentumResult> {
+        const trace = this.opik.trace({ name: options?.maintenanceOnly ? 'momentum-maintenance' : 'momentum-plan', input: { repoPath } });
         try {
             // Pulse Check
             const checkSpan = trace.span({ name: 'pulse-check' });
@@ -226,11 +226,29 @@ export class CoreEngine {
                     status: 'ACTIVE',
                     lastCheck: FieldValue.serverTimestamp(),
                     daysSince: Number(daysSince.toFixed(1)),
+                    opikTraceId: trace.data.id,
                     ...(metadata || {})
                 });
                 trace.update({ output: res as any });
                 trace.end();
                 await this.opik.flush();
+                return res;
+            }
+
+            // Maintenance Mode: Sync and Return
+            if (options?.maintenanceOnly) {
+                const res: MomentumResult = { isStagnant: true, repoRef, daysSince, status: 'STAGNANT_PLANNING' };
+                await this.upsertRepoDoc(repoRef, {
+                    status: 'STAGNANT_PLANNING',
+                    lastCheck: FieldValue.serverTimestamp(),
+                    daysSince: Number(daysSince.toFixed(1)),
+                    opikTraceId: trace.data.id,
+                    ...(metadata || {})
+                });
+                trace.update({ output: res as any });
+                trace.end();
+                await this.opik.flush();
+                console.log(`[Core] Maintenance Sync: ${repoRef} (STAGNANT)`);
                 return res;
             }
 

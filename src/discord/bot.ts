@@ -119,6 +119,24 @@ async function runPatrol() {
     }
 }
 
+async function runMaintenance() {
+    console.log('[Maintenance] Starting full system sync (Skip LLM)...');
+    const repos = await engine.listRepos();
+
+    for (const repoDoc of repos) {
+        const r = repoDoc as any;
+        const repoRef = r.repoRef || r.id;
+        console.log(`[Maintenance] Syncing ${repoRef}...`);
+
+        try {
+            await engine.plan(repoRef, { discordChannelId: r.discordChannelId }, { maintenanceOnly: true });
+        } catch (err: any) {
+            console.error(`[Maintenance] Sync failed for ${repoRef}:`, err.message);
+        }
+    }
+    console.log('[Maintenance] System sync complete.');
+}
+
 const commands = [
     new SlashCommandBuilder()
         .setName('momentum')
@@ -141,6 +159,10 @@ const commands = [
         .addSubcommand(sub =>
             sub.setName('patrol')
                 .setDescription('Manually trigger an 8 AM-style nightly patrol for all tracked repos')
+        )
+        .addSubcommand(sub =>
+            sub.setName('debug')
+                .setDescription('Perform a fast, low-cost maintenance sync of all repos (Skips LLM)')
         ),
     new SlashCommandBuilder()
         .setName('momentum-settings')
@@ -268,6 +290,11 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
                 await cmdInteraction.deferReply({ ephemeral: true });
                 await cmdInteraction.editReply('🚀 **Manual Patrol Triggered.** Checking all tracked repositories for stagnation...');
                 await runPatrol();
+            } else if (subcommand === 'debug') {
+                await cmdInteraction.deferReply({ ephemeral: true });
+                await cmdInteraction.editReply('🔧 **Maintenance Mode Activated.** Syncing dashboard metadata for all repositories (LLM skipped)...');
+                await runMaintenance();
+                await cmdInteraction.editReply('✅ **Sync Complete.** All tracked repositories have been refreshed on the dashboard.');
             }
         }
 
