@@ -103,7 +103,7 @@ export class CoreEngine {
 
         const genAI = new GoogleGenerativeAI(googleKey);
         this.model = genAI.getGenerativeModel({
-            model: 'gemini-3-flash-preview', // Reverted to the working 3.0 model
+            model: 'gemini-1.5-flash', // Switched to 1.5 Flash for much higher Free Tier quota (1500 RPD)
             systemInstruction: 'You are Momentum, a Shadow Developer agent. Your purpose is to unblock stagnant repositories with high-quality, actionable code changes. \n' +
                 '1. ALWAYS start by listing the files in the repository if you don\'t have a clear idea of the structure.\n' +
                 '2. ALWAYS read the content of relevant files (package.json, README, or source files) before proposing a change.\n' +
