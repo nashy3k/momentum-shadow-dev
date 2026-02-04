@@ -51,12 +51,18 @@ cron.schedule('0 5 * * *', async () => {
 
     try {
         const repos = await engine.listRepos();
-        for (const r of repos) {
+        console.log(`[Scheduler] Found ${repos.length} tracked repositories.`);
+
+        for (const repoDoc of repos) {
+            const r = repoDoc as any;
+            const repoRef = r.repoRef || r.id;
+            console.log(`[Scheduler] Checking pulse for ${repoRef}...`);
+
             // Re-run plan to see if still stagnant
-            const result = await engine.plan(r.id);
+            const result = await engine.plan(repoRef);
 
             if (result.isStagnant && result.proposal && r.discordChannelId) {
-                console.log(`[Scheduler] 🚨 Stagnation found for ${r.id}! Alerting Discord...`);
+                console.log(`[Scheduler] 🚨 Stagnation found for ${repoRef}! Alerting Discord...`);
 
                 try {
                     const channel = await client.channels.fetch(r.discordChannelId);
