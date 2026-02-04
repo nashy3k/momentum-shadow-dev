@@ -107,7 +107,36 @@ The Dashboard provides a **"View Brain Trace"** button for every monitored repos
 
 ## 📦 Installation
 
-*(Steps truncated for brevity - see full guide...)*
+1.  **Clone & Install**
+    ```bash
+    git clone https://github.com/nashy3k/momentum-shadow-dev.git
+    cd momentum-shadow-dev
+    npm install
+    ```
+
+2.  **Environment Setup**
+    Create a `.env` file in the root:
+    ```env
+    GOOGLE_API_KEY=AIzaSy... # Gemini API Key
+    DISCORD_TOKEN=MTQ2...    # Discord Bot Token
+    GITHUB_TOKEN=ghp_...     # Classic Token (with repo/workflow scopes)
+    OPIK_API_KEY=...         # Comet Opik API Key
+    OPIK_WORKSPACE=...
+    ```
+
+3.  **Run the Bot**
+    ```bash
+    npm run start-bot
+    ```
+
+4.  **The Dashboard**
+    The dashboard is a separate project in the `web/` folder.
+    ```bash
+    cd web
+    npm install
+    npm run dev
+    # Open http://localhost:3000
+    ```
 
 ## 🎮 Usage
 
