@@ -12,6 +12,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
+    "start": "npm run start-bot",
     "momentum": "tsx src/process/momentum.ts",
     "start-bot": "tsx src/discord/bot.ts"
   },
@@ -31,7 +32,6 @@
   },
   "devDependencies": {
     "@types/node": "^25.0.10",
-    "@types/node-cron": "^3.0.11",
     "@types/node-cron": "^3.0.11",
     "typescript": "^5.9.3"
   }
