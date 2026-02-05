@@ -85,21 +85,6 @@ graph TD
 ```
 
 
-## Professional Observability (Opik Cycle-Based Linking)
-To ensure the system isn't a "Black Box", every patrol cycle is unified under a unique **Cycle ID**. This links three distinct traces in **Comet Opik** into a single cohesive narrative:
-
-1.  **`momentum-plan`** (Root Trace)
-    *   Junior Dev loop (`brain-research`) and initial proposal.
-2.  **`momentum-evaluate`** (Evaluation Trace)
-    *   Senior Dev's **Reasoning Trace** and numerical `score`.
-3.  **`momentum-execute`** (Action Trace)
-    *   The final creation of the GitHub Issue/PR.
-
-**The Filter**: The Dashboard deep-links using `tags contains cycle:<id>`, ensuring that when a user clicks **"View Patrol Cycle"**, they see all three phases (The Thought, The Audit, and The Action) at once. This 100% transparency is a core design principle of Momentum.
-
-## Maintenance Mode (The Debug Command)
-Usage: `/momentum debug`
-This mode triggers the **Pulse Sync Only** branch on the **Zo Computer**. It updates the **Firestore** metadata (days stagnant, last commit) without triggering LLM calls. This allows for frequent UI updates without cost or latency.
 
 ## The Learning Mechanism (Reflexion vs. Evolution)
 You asked: *"Does this system learn from itself?"*
@@ -147,8 +132,20 @@ Momentum chose **Firebase Genkit** as its backbone for robust, production-grade 
 ### 3. Observability Out-of-the-Box
 *   **The Feature**: Genkit's Developer UI allows us to inspect the "Memory" flow in real-time. We can see exactly what the embedding vector looks like and which "Lesson Learned" was retrieved, without adding a single line of `console.log`.
 
-### 🏆 Points for the Opik Judges
-If you are presenting this to the Opik team, highlight these three innovations:
+## Professional Observability (Opik Cycle-Based Linking)
+To ensure the system isn't a "Black Box", every patrol cycle is unified under a unique **Cycle ID**. This links three distinct traces in **Comet Opik** into a single cohesive narrative:
+
+1.  **`momentum-plan`** (Root Trace)
+    *   Junior Dev loop (`brain-research`) and initial proposal.
+2.  **`momentum-evaluate`** (Evaluation Trace)
+    *   Senior Dev's **Reasoning Trace** and numerical `score`.
+3.  **`momentum-execute`** (Action Trace)
+    *   The final creation of the GitHub Issue/PR.
+
+**The Filter**: The Dashboard deep-links using `tags contains cycle:<id>`, ensuring that when a user clicks **"View Patrol Cycle"**, they see all three phases (The Thought, The Audit, and The Action) at once. This 100% transparency is a core design principle of Momentum.
+
+### Core Opik Applications
+The three major innovations:
 
 1.  **The "Cycle ID" Strategy**:
     *   *Problem*: Async bots often lose context between the "Plan" (Job A) and the "Execution" (Job B) which might happen hours later after human approval.
@@ -160,3 +157,7 @@ If you are presenting this to the Opik team, highlight these three innovations:
 
 3.  **Deep-Linking from Dashboards**:
     *   We treat Opik as a "Customer-Facing" feature. The "View Brain Trace" button isn't just for us—it's for the end-user to trust the bot.
+
+## Operations: Maintenance Mode (The Debug Command)
+Usage: `/momentum debug`
+This mode triggers the **Pulse Sync Only** branch on the **Zo Computer**. It updates the **Firestore** metadata (days stagnant, last commit) without triggering LLM calls. This allows for frequent UI updates without cost or latency.
