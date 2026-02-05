@@ -65,6 +65,20 @@ The judge will need to create a `.env` file in the root directory with the follo
 ### 🔍 Deep Dive: Granular Scopes
 To ensure Momentum works as intended, the following scopes are **mandatory**:
 
+#### Database Setup (Firestore)
+Momentum uses Firestore for its "Brain" (Long-term memory) and "Dashboard" (Real-time events).
+1.  **Create Project**: Go to [Firebase Console](https://console.firebase.google.com/) and create a new project.
+2.  **Enable Firestore**: Navigate to **Build > Firestore Database** and click "Create Database". Start in **production mode**.
+3.  **Get Credentials**: 
+    *   Go to **Project Settings > Service Accounts**.
+    *   Click "Generate new private key".
+    *   Save the file as `service-account-key.json` in the root of the repo.
+4.  **Run Setup Script**:
+    ```bash
+    npm run setup:db
+    ```
+    *This will verify your keys and automatically initialize the required collections (`repositories`, `memories`, `users`).*
+
 #### GitHub Personal Access Token (PAT)
 - **`repo`**: Momentum needs to read your code files and create issues/PRs.
 - **`read:user`**: Required to identify the author of stagnant commits.
