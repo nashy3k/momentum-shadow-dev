@@ -422,7 +422,9 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
                     `Proposed Change: ${proposal.description}`,
                     'negative',
                     proposal.repoRef
-                ).catch(err => console.error('[Bot] Failed to save rejection memory:', err));
+                ).then(() => {
+                    console.log(`[Bot] Learning from human rejection: ${proposal.repoRef}`);
+                }).catch(err => console.error('[Bot] Failed to save rejection memory:', err));
 
                 pendingProposals.delete(proposalId);
             }
