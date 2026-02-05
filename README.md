@@ -178,10 +178,11 @@ flowchart LR
     Dashboard["Firebase Hosting (Next.js)"] --> DB
 ```
 
-## 🔮 Future Roadmap (The "Evolution" Phase)
+## 🔮 Future Roadmap (Phase 10+)
 
-*   **Self-Reinforcement**: Feed accepted/rejected "Shadow PR" data back into the Brain to teach it your specific coding style over time.
-*   **Multi-Repo Awareness**: Allow the bot to see "how we did it in the other repo" to solve cross-project dependency issues.
+*   **Autonomous Debugging Hub**: Integrate with GitHub Actions to automatically pull build logs and "Self-Repair" the code before a human even sees the failure.
+*   **Multi-Agent Swarm**: Deploy specialized agents for different domains (Security, UX, DevOps) that debate each other in the "Senior Dev" phase to reach a consensus.
+*   **Zero-Knowledge Secrets**: Implement an encrypted vault for bot keys so users can delegate repository access with 100% security.
 
 ## 📜 License
 
