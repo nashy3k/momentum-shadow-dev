@@ -1,6 +1,7 @@
 {
   "name": "vector-skylab",
   "version": "1.0.0",
+  "license": "Polyform-Noncommercial-1.0.0",
   "engines": {
     "node": ">=22.0.0"
   },

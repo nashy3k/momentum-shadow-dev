@@ -185,4 +185,9 @@ flowchart LR
 
 ## 📜 License
 
-MIT
+This project is licensed under the **Polyform Noncommercial License 1.0.0**. 
+
+*   **Non-commercial Use Only**: You are free to view, fork, and use this code for personal, educational, or testing purposes.
+*   **Commercial Use Restricted**: Commercial use, including running this bot as a paid service or using the logic in commercial products, is strictly prohibited without explicit permission from the author.
+
+See the [LICENSE](LICENSE) file for the full legal text.
