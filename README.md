@@ -125,6 +125,15 @@ For a more granular look at how Momentum operates, check out these guides:
 *   [**Uptime & Monitoring**](uptime_guide.md): Understanding the difference between machine uptime and bot stability on Zo.
 *   [**User Access & Security**](user_guide.md): Details on Judge Access, Authentication, and the Multi-Tenancy Roadmap.
 
+## 🎮 Live Experience (Guest Demo)
+
+If you are a judge or a curious visitor, you don't need to deploy anything to see Momentum's internal reasoning.
+
+*   **Live Dashboard**: [https://momentum-shadow-dev-4321.web.app/](https://momentum-shadow-dev-4321.web.app/)
+    *   *Login with any Google account to see the current fleet of monitored repos.*
+*   **Discord Interaction**: You can invite the demo bot to your server to test the `/momentum check` and `/momentum link` commands.
+    *   👉 [**Invite Momentum (Live Demo Bot)**](https://discord.com/api/oauth2/authorize?client_id=1464207508603408404&permissions=346112&scope=bot%20applications.commands)
+
 ## 📦 Installation
 
 1.  **Clone & Install**

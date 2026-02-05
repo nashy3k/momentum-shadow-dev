@@ -25,6 +25,10 @@ If the system is "Locked" to the owner, you might wonder why the `/momentum link
 - **Notification Simulation**: It demonstrates how the bot identifies users. In a multi-tenant environment, this link is what allows the bot to @mention the correct developer when a "Shadow PR" is ready.
 - **UX Verification**: Linking allows the judge to see their own name and avatar appear on the Momentum Dashboard, proving the NextAuth/Firestore integration is working as designed.
 
+### 🎮 Live Demo Invite
+Want to see the bot in action without hosting it? You can invite the **Momentum Demo Instance** to your own test Discord server:
+👉 [**Invite Momentum (Live Demo)**](https://discord.com/api/oauth2/authorize?client_id=1464207508603408404&permissions=346112&scope=bot%20applications.commands)
+
 ## 2. Future Multi-Tenancy Roadmap (Commercial Phase)
 To move from "Hackathon Demo" to "SaaS Product", the following changes are required:
 
@@ -79,8 +83,6 @@ Momentum uses Firestore for its "Brain" (Long-term memory) and "Dashboard" (Real
     ```
     *This will verify your keys and automatically initialize the required collections (`repositories`, `memories`, `users`).*
 
-    *This will verify your keys and automatically initialize the required collections (`repositories`, `memories`, `users`).*
-
 #### ☁️ Google Cloud Platform (GCP)?
 **Good News:** You do **NOT** need to configure complex IAM roles, Vertex AI, or Cloud Run to test this project.
 - **For AI**: We use the standard **Gemini API Key** from [Google AI Studio](https://aistudio.google.com/), which is separate from GCP Vertex AI.
@@ -116,4 +118,4 @@ If deploying to a permanent server (like Zo or DigitalOcean), handling the Disco
 2.  **Process Management**:
     *   **Do not** use `npm run start-bot` directly in a terminal that might close.
     *   Use the **Zo System Supervisor** (recommended for Zo) or `pm2`.
-    *   Refer to `uptime_guide.md` in the repo for detailed daemon configuration.
+    *   Refer to [uptime_guide.md](https://github.com/nashy3k/momentum-shadow-dev/blob/main/uptime_guide.md) in the repo for detailed daemon configuration.
