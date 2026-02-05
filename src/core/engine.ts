@@ -50,7 +50,7 @@ export class CoreEngine {
     private opik: Opik;
     private db: Firestore | null = null;
     private dbEnabled: boolean = true;
-    private memory: MemoryManager;
+    public memory: MemoryManager;
 
     constructor() {
         // Robust Opik Init

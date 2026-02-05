@@ -414,11 +414,20 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
                 });
             }
         } else {
-            if (proposalId) {
+            if (proposalId && proposal) {
+                // AUTO-LEARNING: Save human rejection as a "Negative Memory"
+                engine.memory.addMemory(
+                    `HUMAN REJECTION: User rejected proposal for ${proposal.repoRef}.\n` +
+                    `Reason: Manual intervention.\n` +
+                    `Proposed Change: ${proposal.description}`,
+                    'negative',
+                    proposal.repoRef
+                ).catch(err => console.error('[Bot] Failed to save rejection memory:', err));
+
                 pendingProposals.delete(proposalId);
             }
             await btnInteraction.update({
-                content: '❌ **Proposal Rejected.**',
+                content: '❌ **Proposal Rejected.** (Momentum has learned from this rejection 🧠)',
                 components: [],
                 embeds: btnInteraction.message.embeds
             });

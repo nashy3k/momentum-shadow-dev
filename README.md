@@ -32,11 +32,17 @@ graph TD
     subgraph "Mode Select"
         Core --> Mode{Mode?}
         Mode -->|Debug| Sync[Pulse Sync Only]
-        Mode -->|Plan| Detect{Stagnant?}
+        Mode -->|Plan| Recall{Recall Phase}
+    end
+
+    subgraph "The Hippocampus (Memory & Skills)"
+        Recall -->|Search| Memories[("Firestore Memories")]
+        Recall -->|Load| Skills[(".agent/skills/*.md")]
+        Memories & Skills --> Enriched[Enriched System Prompt]
     end
 
     subgraph "Junior Dev (Generation Phase)"
-        Detect -->|Yes| Research[Research Loop]
+        Enriched --> Research[Research Loop]
         Research -->|"listFiles / getFile"| Repo[("GitHub Repository")]
         Research -->|"Context Gathered"| Draft[Draft Proposal]
     end
@@ -46,7 +52,10 @@ graph TD
         Evaluator -->|"Check Rubric"| Score{"Score >= 7?"}
     end
 
-    subgraph "Feedback Loop"
+    subgraph "Learning Loop"
+        Score -->|"No"| LearnF[Save Negative Memory]
+        Score -->|"Yes"| LearnS[Save Positive Memory]
+        LearnF & LearnS --> Memories
         Score -->|"No"| Feedback["Generate Feedback"]
         Feedback -->|"3. Retry with Context"| Research
     end
@@ -62,6 +71,8 @@ graph TD
     style Discord fill:#5865F2,color:white
     style Sync fill:#4a4e69
     style ZoHost fill:#f1c40f,color:black,stroke:#f39c12
+    style Memories fill:#ff4757,color:white
+    style Skills fill:#ffa502,color:black
 ```
 
 ### The Senior Dev's Rubric
@@ -72,14 +83,13 @@ The Evaluator doesn't just "look" at the code; it executes a strict **Reasoning 
 
 ## 🚀 Key Features
 
+*   **Evolution (Long-Term Learning)**: Momentum now features a "Hippocampus"—a Firestore Vector store that tracks every success and failure. It uses **text-embedding-004** to recall similar past "Lessons Learned" and inject them into future plans.
+*   **Skill Sync**: Automatically bridges the gap between AI and human standards by syncing your `.agent/skills/*.md` files directly into the reasoning context.
 *   **Reflexion (Short-Term Learning)**: The "Junior Dev" automatically retries and fixes its own mistakes *before* alerting you, triggered by the Senior Dev's feedback.
-*   **Accuracy Pipeline**: Uses a Dual-Brain architecture to reduce hallucinations.
-*   **Dual-Brain Accuracy Pipeline**: Junior Dev (Flash 3) proposes, Senior Dev (Architect Persona) audits.
+*   **Accuracy Pipeline**: Uses a Dual-Brain architecture (Junior Dev vs. Senior Dev Architect) to reduce hallucinations.
 *   **Cycle-Based Observability**: Groups Planning, Reasoning, and Execution traces into a single "Patrol Cycle" in Comet Opik.
-*   **Zo Computer Hosting**: 24/7 autonomous runtime environment.
-*   **Dynamic Dashboard**: Real-time status sync with **Google Firestore** persistence.
-*   **Interactive Dashboard**: Real-time fleet monitoring with "View Brain Trace" deep links.
-*   **Cloud Native**: Built on **Google Cloud Platform** and **Firebase/Firestore**.
+*   **Zo Computer Hosting**: 24/7 autonomous runtime environment on a dedicated container.
+*   **Dynamic Dashboard**: Real-time fleet monitoring with **Google Firestore** persistence and deep-trace links.
 
 ## 🔮 Professional Observability (Opik)
 
@@ -98,7 +108,7 @@ The Dashboard provides a **"View Brain Trace"** button for every monitored repos
 
 ## 🛠️ Stack
 
-*   **Brain**: Google Gemini 3 Flash (via Genkit)
+*   **Brain**: Google Gemini 3 Flash (Reasoning) & **text-embedding-004** (Memory)
 *   **Body**: Node.js / TypeScript
 *   **Runtime Host**: **Zo Computer** (24/7 dedicated container)
 *   **Persistence**: **Google Firestore** (Real-time NoSQL)
@@ -155,7 +165,7 @@ The Dashboard provides a **"View Brain Trace"** button for every monitored repos
 flowchart LR
     Zo["Zo Computer (24/7 Bot)"] --> Engine[Core Engine]
     Engine --> Opik[Comet Opik]
-    Engine --> Gemini[Gemini 3 Flash]
+    Engine --> Gemini[Gemini 3 Flash + Embedding]
     Engine --> GitHub[GitHub API]
     Engine --> DB[(Google Firestore)]
     Dashboard["Firebase Hosting (Next.js)"] --> DB
