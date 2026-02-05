@@ -106,3 +106,14 @@ When inviting the bot to your test server, use the URL generator with these sett
 *   **Startup**: `npm run start-bot` will perform a "Pre-Flight Check".
     *   If any key is missing, the bot will print a clear error: `[Error] Missing Environment Variable: DISCORD_TOKEN` and exit safely.
 *   **Isolation**: Forking the repo **DOES NOT** grant access to the original `nashy3k` database or memory banks. The judge starts with a "Blank Brain" (Tabula Rasa).
+
+## 4. Production Deployment (Optional)
+**Note for Judges**: This section is only required if you want to run the bot 24/7 on a cloud server. For testing, please stick to the [Local Self-Hosting](#3-deployment-for-judges-forking--self-hosting) guide above.
+
+### Zo Computer / VPS Setup
+If deploying to a permanent server (like Zo or DigitalOcean), handling the Discord process requires a process manager.
+1.  **Clone & Install**: Same as local setup.
+2.  **Process Management**:
+    *   **Do not** use `npm run start-bot` directly in a terminal that might close.
+    *   Use the **Zo System Supervisor** (recommended for Zo) or `pm2`.
+    *   Refer to `uptime_guide.md` in the repo for detailed daemon configuration.
