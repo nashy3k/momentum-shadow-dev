@@ -65,7 +65,25 @@ graph TD
     style Memories fill:#ff4757,color:white
     style Skills fill:#ffa502,color:black
     style UserReview fill:#27ae60,color:white
+    style UserReview fill:#27ae60,color:white
+
+    %% Opik Tracing Layer
+    subgraph "Comet Opik Observability"
+        direction LR
+        Trace1[("Trace: brain-research")] 
+        Trace2[("Trace: momentum-evaluate")]
+        Trace3[("Trace: momentum-execute")]
+    end
+
+    Research -.->|"Log Span"| Trace1
+    Evaluator -.->|"Log Span"| Trace2
+    Push -.->|"Log Span"| Trace3
+    
+    style Trace1 fill:#e056fd,color:white
+    style Trace2 fill:#e056fd,color:white
+    style Trace3 fill:#e056fd,color:white
 ```
+
 
 ## Professional Observability (Opik Cycle-Based Linking)
 To ensure the system isn't a "Black Box", every patrol cycle is unified under a unique **Cycle ID**. This links three distinct traces in **Comet Opik** into a single cohesive narrative:
@@ -101,3 +119,44 @@ This is the **Feedback Loop** in the diagram above.
 *   **Expert System Skills**: The engine also bridges the gap with explicit human guidance by automatically syncing `.agent/skills/*.md` files into the reasoning context.
 *   **Human-in-the-loop Learning**: Rejections on Discord are captured as "Negative Memories," ensuring the bot doesn't make the same stylistic mistake twice.
 *   **Result**: The system evolves with every repo check, becoming a permanently improving partner that follows your project-specific standards.
+
+## 🧠 The "Golden Nugget": Hybrid SDK Strategy
+
+One of the most powerful architectural decisions in Momentum is the **split-brain SDK implementation**. Rather than fighting with a single abstraction, we leverage the distinct strengths of two Google-native libraries alongside the Gemini 3 Flash model.
+
+| SDK | Component | Reason for Choice |
+| :--- | :--- | :--- |
+| **Google Generative AI SDK** | **The Planner (CoreEngine)** | **Low-Level Control**: The `generateContent` API provides raw access to token streams. Crucial for the "Senior Dev" persona to prevent hallucinations.<br><br>**Specs**:<br>• File: `src/core/engine.ts`<br>• Model: `gemini-3-flash-preview`<br>• Why: Confirmed Gemini 3.0 reasoning. |
+| **Firebase Genkit** | **The Memory (Hippocampus)** | **Type-Safe Abstraction**: Genkit shines at "Flows" by handling the vectorization pipeline with zero friction.<br><br>**Specs**:<br>• File: `src/core/memory.ts`<br>• Plugin: `googleai/gemini-2.0-flash-exp`<br>• Why: Genkit's `2.0-flash-exp` is the current equivalent wrapper for the bleeding-edge Flash model. |
+
+**Why this matters for your demo:**
+> "We didn't just use a framework. We architected a hybrid. We use raw metal (SDK) for the thinking, and modern plumbing (Genkit) for the memory. This gives us the speed of a script with the structure of an enterprise app."
+
+## 🛠️ Tech Stack: Why Genkit? (vs LangChain / n8n)
+
+Momentum chose **Firebase Genkit** as its backbone for robust, production-grade AI integration. Here is the comparison for your slide deck:
+
+### 1. Code-First vs. Graph-First (vs n8n)
+*   **The Problem with n8n**: Low-code tools are great for prototyping, but `JSON` logic gets messy at scale.
+*   **The Genkit Win**: Momentum is written in **TypeScript**. Our prompts, flows, and memory logic are strongly typed. If the API schema changes, our build fails *before* deployment, not during the demo.
+
+### 2. Native Google Integration (vs LangChain)
+*   **The Problem with LangChain**: It's a "Generic Wrapper". It adds varied latency and abstraction layers to support every model under the sun.
+*   **The Genkit Win**: Genkit is built *by* the Firebase/Google team. It has first-party support for `gemini-2.0-flash-exp` and `text-embedding-004`. There is no "translation layer"—it is pure, optimized utilization of the Google Cloud infrastructure.
+
+### 3. Observability Out-of-the-Box
+*   **The Feature**: Genkit's Developer UI allows us to inspect the "Memory" flow in real-time. We can see exactly what the embedding vector looks like and which "Lesson Learned" was retrieved, without adding a single line of `console.log`.
+
+### 🏆 Points for the Opik Judges
+If you are presenting this to the Opik team, highlight these three innovations:
+
+1.  **The "Cycle ID" Strategy**:
+    *   *Problem*: Async bots often lose context between the "Plan" (Job A) and the "Execution" (Job B) which might happen hours later after human approval.
+    *   *Solution*: We persist a generic `cycle_id` in Firestore. When the user clicks "Approve" in Discord, we re-hydrate that ID and tag the execution trace. This stitches together a fragmented timeline into one cohesive Opik story.
+
+2.  **LLM-as-a-Judge Implementation**:
+    *   We don't just "log" data. We use Opik to trace the **Senior Dev's Evaluation**.
+    *   The `momentum-evaluate` span captures the input (Draft Code), the output (Score), and the *reasoning* (The Critique). This creates a dataset that we can use to fine-tune the Junior Dev later.
+
+3.  **Deep-Linking from Dashboards**:
+    *   We treat Opik as a "Customer-Facing" feature. The "View Brain Trace" button isn't just for us—it's for the end-user to trust the bot.
