@@ -1,5 +1,15 @@
-import * as dotenv from 'dotenv';
 dotenv.config({ override: true });
+
+// GLOBAL LOGGING: Add timestamps to every console log automatically
+const originalLog = console.log;
+const originalError = console.error;
+const originalWarn = console.warn;
+
+const getTimestamp = () => new Date().toISOString() + ': ';
+
+console.log = (...args) => originalLog(getTimestamp(), ...args);
+console.error = (...args) => originalError(getTimestamp(), ...args);
+console.warn = (...args) => originalWarn(getTimestamp(), ...args);
 
 import {
     Client,
@@ -174,6 +184,20 @@ const commands = [
 ].map(command => command.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(token);
+
+import * as http from 'http';
+
+// KEEPALIVE: Fake Web Service to trick Zo Computer into staying awake
+// This allows us to use UptimeRobot to ping the service every 5 minutes.
+const PORT = process.env.PORT || 3000;
+const server = http.createServer((req, res) => {
+    res.writeHead(200);
+    res.end('Momentum Bot is Alive! 🤖');
+});
+
+server.listen(PORT, () => {
+    console.log(`[KeepAlive] HTTP Server listening on port ${PORT}`);
+});
 
 (async () => {
     try {
