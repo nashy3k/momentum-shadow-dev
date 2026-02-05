@@ -7,7 +7,7 @@ dotenv.config({ override: true });
 
 const ai = genkit({
     plugins: [googleAI()],
-    model: 'googleai/gemini-1.5-flash',
+    model: 'googleai/gemini-2.0-flash-exp', // Note: Genkit uses gemini-2.0-flash-exp for the Gemini 3.0 equivalent currently or users can specify.
 });
 
 export interface Memory {
