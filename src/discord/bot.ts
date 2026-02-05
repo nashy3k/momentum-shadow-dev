@@ -196,9 +196,29 @@ const server = http.createServer((req, res) => {
     res.end('Momentum Bot is Alive! 🤖');
 });
 
+server.on('error', (e: any) => {
+    if (e.code === 'EADDRINUSE') {
+        console.warn(`[KeepAlive] Port ${PORT} is already in use. The bot will continue, but the health check may fail if owned by a zombie process.`);
+    } else {
+        console.error(`[KeepAlive] Server error:`, e);
+    }
+});
+
 server.listen(PORT, () => {
     console.log(`[KeepAlive] HTTP Server listening on port ${PORT}`);
 });
+
+// Graceful Shutdown: Ensure the port is released when the process dies
+const shutdown = () => {
+    console.log('[Bot] Shutting down gracefully...');
+    server.close(() => {
+        client.destroy();
+        process.exit(0);
+    });
+};
+
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
 
 (async () => {
     try {
