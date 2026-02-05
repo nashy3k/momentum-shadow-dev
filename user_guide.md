@@ -31,13 +31,33 @@ match /repositories/{repoId} {
 }
 ```
 
-### B. "Bring Your Own Key" (BYOK) Vault
-Instead of using the Owner's `.env` file, the bot will fetch API keys from a secure Vault based on the user triggering the command.
-*   **User A -> /momentum check -> Bot loads User A's GH_TOKEN**
-*   **User B -> /momentum check -> Bot loads User B's GH_TOKEN**
+### B. "Bring Your Own Key" (BYOK) Vault (Feasibility Study)
+To allow external users to add their own repos, we will move away from the static `.env` file to a dynamic Vault system.
 
-## 3. Deployment for Judges (Forking)
-If a Judge forks this repository to test it themselves:
-*   They **MUST** provide their own `.env` credentials (OpenAI/Gemini, Discord, GitHub).
-*   They **MUST** set up their own Firestore instance.
-*   **Security Guarantee**: The code is designed to crash safely if these credentials are missing, ensuring no "leakage" of the original owner's access.
+**Implementation Plan:**
+1.  **Dashboard UI**: Add "Settings > Integration" page where users can input their encrypted `GITHUB_TOKEN`.
+2.  **Encryption**: Token is encrypted (AES-256) and stored in Firestore under `users/{uid}/vault/github`.
+3.  **Bot Logic Update**:
+    *   Instead of `process.env.GITHUB_TOKEN`, the bot will read the `userId` from the discord interaction.
+    *   Fetch and decrypt the specific user's token.
+    *   Initialize a *new* `Octokit` instance for that specific request.
+4.  **GitHub Apps (Preferred)**: Alternatively, we can register "Momentum" as a GitHub App. Users simply click "Install on my Repos" (OAuth2), and we get a temporary installation token. This removes the need for users to handle raw API keys.
+
+## 3. Deployment for Judges (Forking & Self-Hosting)
+If a Judge wants to verify the code by running it themselves (forking), they have full capability to do so, provided they bring their own infrastructure.
+
+### 🛠️ "The Forker's Checklist"
+The judge will need to create a `.env` file in the root directory with the following **Required Credentials**:
+
+| Variable | Requirement | Result if Missing |
+| :--- | :--- | :--- |
+| `GOOGLE_API_KEY` | Gemini 1.5/3.0 API Key | Bot cannot generate plans. |
+| `DISCORD_TOKEN` | A new Discord Bot Token | Bot cannot sign in to Discord. |
+| `GITHUB_TOKEN` | Classic Token (Repo Scope) | Bot cannot see or edit code. |
+| `GOOGLE_APPLICATION_CREDENTIALS` | Path to valid `service-account.json` | Bot cannot save memories to Firestore. |
+
+### 🚨 What Happens?
+*   **Installation**: `npm install` handles all dependencies perfectly.
+*   **Startup**: `npm run start-bot` will perform a "Pre-Flight Check".
+    *   If any key is missing, the bot will print a clear error: `[Error] Missing Environment Variable: DISCORD_TOKEN` and exit safely.
+*   **Isolation**: Forking the repo **DOES NOT** grant access to the original `nashy3k` database or memory banks. The judge starts with a "Blank Brain" (Tabula Rasa).
