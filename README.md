@@ -123,6 +123,7 @@ For a more granular look at how Momentum operates, check out these guides:
 *   [**Workflow Architecture**](workflow_architecture.md): Deep dive into the Junior/Senior dev loop and the Hippocampus memory system.
 *   [**Zo Deployment & Stability**](zo_sitrep.md): How we handle the autonomous 24/7 runtime and "Zombie" process prevention.
 *   [**Uptime & Monitoring**](uptime_guide.md): Understanding the difference between machine uptime and bot stability on Zo.
+*   [**User Access & Security**](user_guide.md): Details on Judge Access, Authentication, and the Multi-Tenancy Roadmap.
 
 ## 📦 Installation
 
