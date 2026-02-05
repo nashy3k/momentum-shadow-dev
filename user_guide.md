@@ -79,6 +79,14 @@ Momentum uses Firestore for its "Brain" (Long-term memory) and "Dashboard" (Real
     ```
     *This will verify your keys and automatically initialize the required collections (`repositories`, `memories`, `users`).*
 
+    *This will verify your keys and automatically initialize the required collections (`repositories`, `memories`, `users`).*
+
+#### ☁️ Google Cloud Platform (GCP)?
+**Good News:** You do **NOT** need to configure complex IAM roles, Vertex AI, or Cloud Run to test this project.
+- **For AI**: We use the standard **Gemini API Key** from [Google AI Studio](https://aistudio.google.com/), which is separate from GCP Vertex AI.
+- **For DB**: The Firebase Project *is* a GCP project, but the Firebase Console handles all the API enabling for you automatically.
+- **Deployment**: If you want to deploy the Dashboard to production, you will need to set up Firebase App Hosting, but for testing, `localhost` works perfectly with the Service Account.
+
 #### GitHub Personal Access Token (PAT)
 - **`repo`**: Momentum needs to read your code files and create issues/PRs.
 - **`read:user`**: Required to identify the author of stagnant commits.
