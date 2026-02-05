@@ -133,6 +133,7 @@ export class CoreEngine {
 
         try {
             const files = fs.readdirSync(skillsDir).filter(f => f.endsWith('.md'));
+            console.log(`[Core] Skill Sync: Found ${files.length} skill files in .agent/skills/`);
             let skillText = '\n--- EXPERT SYSTEM SKILLS ---\n';
             for (const file of files) {
                 const content = fs.readFileSync(path.join(skillsDir, file), 'utf-8');
@@ -294,6 +295,8 @@ export class CoreEngine {
             const pastMemories = await this.memory.search(repoRef, 3);
             const skills = await this.loadSkills();
 
+            console.log(`[Core] "The Recall" complete: Recalled ${pastMemories.length} memories and active expert skills.`);
+
             let memoryContext = '';
             if (pastMemories.length > 0) {
                 memoryContext = '\n--- LESSONS LEARNED (Past Experiences) ---\n';
@@ -405,6 +408,7 @@ export class CoreEngine {
             };
 
             const evaluation = (plan as any)._evaluation;
+            console.log(`[Core] Evaluation: Senior Dev gave this proposal a ${evaluation.score}/10 score. Reasoning: ${evaluation.reasoning}`);
             const finalRes: MomentumResult = { isStagnant: true, repoRef, daysSince, proposal, status: 'STAGNANT_PLANNING', evaluation };
 
             await this.upsertRepoDoc(repoRef, {
@@ -473,6 +477,7 @@ export class CoreEngine {
     }
 
     async execute(proposal: MomentumProposal): Promise<MomentumResult> {
+        console.log(`[Core] 🚀 Executing approved Shadow PR for ${proposal.repoRef}...`);
         const trace = this.opik.trace({ name: 'momentum-execute', input: { proposal }, tags: [`repo:${proposal.repoRef}`, `cycle:${proposal.originTraceId}`] });
         try {
             const repoUrl = proposal.repoRef.startsWith('http') ? proposal.repoRef : `https://github.com/${proposal.repoRef}`;

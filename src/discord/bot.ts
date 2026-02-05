@@ -367,6 +367,7 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
         }
 
         if (action === 'approve') {
+            console.log(`[Bot] Approval received for ${proposal.repoRef}. Passing to Engine...`);
             await btnInteraction.update({
                 content: '🚀 **Executing Shadow PR...**',
                 components: [],

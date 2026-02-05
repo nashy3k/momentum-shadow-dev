@@ -93,6 +93,7 @@ export class MemoryManager {
             .sort((a, b) => b.similarity - a.similarity)
             .slice(0, limit);
 
+        console.log(`[Memory] Recalled ${similarities.length} relevant lessons for query: "${query.substring(0, 30)}..."`);
         return similarities.map(s => s.memory);
     }
 
