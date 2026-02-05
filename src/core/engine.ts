@@ -433,6 +433,7 @@ export class CoreEngine {
                 daysSince: Number(daysSince.toFixed(1)),
                 activeProposal: proposal,
                 evaluation, // Store in DB
+                opikTraceId: cycleId, // CRITICAL: Save for Dashboard Deep-Link
                 ...(metadata || {}) // Merge any discord metadata
             });
 
