@@ -26,12 +26,13 @@
     "genkit": "^1.27.0",
     "node-cron": "^4.2.1",
     "opik": "^1.9.92",
-    "zod": "^4.3.5"
+    "zod": "^4.3.5",
+    "tsx": "^4.21.0"
   },
   "devDependencies": {
     "@types/node": "^25.0.10",
     "@types/node-cron": "^3.0.11",
-    "tsx": "^4.21.0",
+    "@types/node-cron": "^3.0.11",
     "typescript": "^5.9.3"
   }
 }
