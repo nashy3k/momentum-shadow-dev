@@ -127,6 +127,24 @@ export class CoreEngine {
         });
     }
 
+    private async loadSkills(): Promise<string> {
+        const skillsDir = path.resolve(process.cwd(), '.agent/skills');
+        if (!fs.existsSync(skillsDir)) return '';
+
+        try {
+            const files = fs.readdirSync(skillsDir).filter(f => f.endsWith('.md'));
+            let skillText = '\n--- EXPERT SYSTEM SKILLS ---\n';
+            for (const file of files) {
+                const content = fs.readFileSync(path.join(skillsDir, file), 'utf-8');
+                skillText += `\n[Skill: ${file}]\n${content}\n`;
+            }
+            return skillText;
+        } catch (err) {
+            console.warn('[Core] Failed to load skills:', err);
+            return '';
+        }
+    }
+
     private getTools() {
         return [
             {
@@ -271,7 +289,35 @@ export class CoreEngine {
                 }
             }
 
-            const chat = this.model.startChat({ tools: [{ functionDeclarations: this.getTools() as any }] });
+            // FETCH MEMORIES & SKILLS (The Recall)
+            console.log('[Core] Recalling past experiences and documentation...');
+            const pastMemories = await this.memory.search(repoRef, 3);
+            const skills = await this.loadSkills();
+
+            let memoryContext = '';
+            if (pastMemories.length > 0) {
+                memoryContext = '\n--- LESSONS LEARNED (Past Experiences) ---\n';
+                pastMemories.forEach((m, i) => {
+                    memoryContext += `[Lesson ${i + 1}] ${m.type.toUpperCase()}: ${m.text}\n`;
+                });
+            }
+
+            // DYNAMIC BRAIN: Re-initialize model with enriched context
+            const googleKey = process.env.GOOGLE_API_KEY || '';
+            const genAI = new GoogleGenerativeAI(googleKey);
+            const dynamicModel = genAI.getGenerativeModel({
+                model: 'gemini-3-flash-preview',
+                systemInstruction: 'You are Momentum, a Shadow Developer agent. Your purpose is to unblock stagnant repositories with high-quality, actionable code changes. \n' +
+                    '1. ALWAYS start by listing the files in the repository if you don\'t have a clear idea of the structure.\n' +
+                    '2. ALWAYS read the content of relevant files (package.json, README, or source files) before proposing a change.\n' +
+                    '3. Propose a change that actually improves the repo.\n' +
+                    '4. ONLY call researchRepo when you have a specific, high-quality code change to propose.\n' +
+                    '\nUSE THE FOLLOWING CONTEXT TO GUIDE YOUR DECISIONS:\n' +
+                    memoryContext + '\n' +
+                    skills
+            });
+
+            const chat = dynamicModel.startChat({ tools: [{ functionDeclarations: this.getTools() as any }] });
             let prompt = `Repository ${repoRef} is stagnant. \n\nContext:\n${context}\n\nPropose a high-impact improvement change now. Start by researching the repo structure.`;
             researchSpan.update({ input: { prompt } });
 
