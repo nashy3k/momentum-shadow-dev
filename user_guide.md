@@ -49,12 +49,29 @@ If a Judge wants to verify the code by running it themselves (forking), they hav
 ### 🛠️ "The Forker's Checklist"
 The judge will need to create a `.env` file in the root directory with the following **Required Credentials**:
 
-| Variable | Requirement | Result if Missing |
+| Variable | Requirement | Scopes / Permissions |
 | :--- | :--- | :--- |
-| `GOOGLE_API_KEY` | Gemini 1.5/3.0 API Key | Bot cannot generate plans. |
-| `DISCORD_TOKEN` | A new Discord Bot Token | Bot cannot sign in to Discord. |
-| `GITHUB_TOKEN` | Classic Token (Repo Scope) | Bot cannot see or edit code. |
-| `GOOGLE_APPLICATION_CREDENTIALS` | Path to valid `service-account.json` | Bot cannot save memories to Firestore. |
+| `GOOGLE_API_KEY` | Gemini 1.5/3.0 API Key | `GenAI API Access` |
+| `DISCORD_TOKEN` | Discord Bot Token | **OAuth2**: `bot`, `applications.commands`<br>**Bot Perms**: `Send Messages`, `Embed Links`, `Read Message History` |
+| `GITHUB_TOKEN` | Classic PAT | `repo` (Full control) & `workflow` (optional) |
+| `GOOGLE_APPLICATION_CREDENTIALS` | Firebase Service Account | `Firestore Editor` |
+
+### 🔍 Deep Dive: Granular Scopes
+To ensure Momentum works as intended, the following scopes are **mandatory**:
+
+#### GitHub Personal Access Token (PAT)
+- **`repo`**: Momentum needs to read your code files and create issues/PRs.
+- **`read:user`**: Required to identify the author of stagnant commits.
+- **`workflow`**: Required if you want the bot to self-repair GitHub Action CI failures.
+
+#### Discord Bot Setup
+When inviting the bot to your test server, use the URL generator with these settings:
+- **Scopes**: `bot`, `applications.commands`.
+- **Bot Permissions**: 
+    - `Send Messages`
+    - `Embed Links` (Crucial for Dashboard previews)
+    - `Read Message History`
+    - `Use External Emojis` (For 🟢/🔴 status indicators)
 
 ### 🚨 What Happens?
 *   **Installation**: `npm install` handles all dependencies perfectly.
