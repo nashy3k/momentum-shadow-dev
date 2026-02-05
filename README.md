@@ -117,6 +117,13 @@ The Dashboard provides a **"View Brain Trace"** button for every monitored repos
 *   **Voice**: Discord.js
 *   **Face**: Next.js (Dashboard)
 
+## 📚 Technical Deep Dives
+
+For a more granular look at how Momentum operates, check out these guides:
+*   [**Workflow Architecture**](workflow_architecture.md): Deep dive into the Junior/Senior dev loop and the Hippocampus memory system.
+*   [**Zo Deployment & Stability**](zo_sitrep.md): How we handle the autonomous 24/7 runtime and "Zombie" process prevention.
+*   [**Uptime & Monitoring**](uptime_guide.md): Understanding the difference between machine uptime and bot stability on Zo.
+
 ## 📦 Installation
 
 1.  **Clone & Install**
