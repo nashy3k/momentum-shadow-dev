@@ -19,6 +19,12 @@ If a Judge or User logs in with their own Google Account:
     *   *Reason*: The Bot on Zo is hardcoded to listen for the Owner's commands and uses the Owner's API keys. It does not yet dynamically load keys for other users.
 3.  **They CANNOT**: trigger actions that require specific GitHub permissions (unless they are the repo owner).
 
+### ❓ Why should a Judge link their Discord ID?
+If the system is "Locked" to the owner, you might wonder why the `/momentum link` command exists for judges.
+- **Technical Demonstration**: It proves the **Cross-Platform Auth Bridge**. By linking, a judge can verify that Momentum successfully maps a Discord User to a Web Dashboard Profile in real-time.
+- **Notification Simulation**: It demonstrates how the bot identifies users. In a multi-tenant environment, this link is what allows the bot to @mention the correct developer when a "Shadow PR" is ready.
+- **UX Verification**: Linking allows the judge to see their own name and avatar appear on the Momentum Dashboard, proving the NextAuth/Firestore integration is working as designed.
+
 ## 2. Future Multi-Tenancy Roadmap (Commercial Phase)
 To move from "Hackathon Demo" to "SaaS Product", the following changes are required:
 
