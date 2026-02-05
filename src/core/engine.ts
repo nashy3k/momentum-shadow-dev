@@ -451,14 +451,34 @@ export class CoreEngine {
     }
 
     private async evaluateProposal(proposal: any, context: string, parentTrace: any, cycleId: string): Promise<EvaluationResult> {
-        const evalSpan = parentTrace.span({ name: 'momentum-evaluate', type: 'evaluate' });
+        const evalSpan = parentTrace.span({ name: 'momentum-evaluate', type: 'llm' });
         // Force tag this span in case it is promoted to a Trace
         evalSpan.update({ tags: [`cycle:${cycleId}`] });
         let prompt = '';
         try {
             prompt = `EVALUATE this proposal based on the rubric.\n\nContext:\n${context}\n\nProposal:\nFile: ${proposal.targetFile}\nDescription: ${proposal.description}\nCode Change:\n${proposal.codeChange}`;
 
-            const result = await this.evaluator.generateContent(prompt);
+            // Retry loop for 503 Service Unavailable (Gemini Overload)
+            let result;
+            let retryCount = 0;
+            const maxRetries = 3;
+
+            while (true) {
+                try {
+                    result = await this.evaluator.generateContent(prompt);
+                    break;
+                } catch (apiErr: any) {
+                    if (apiErr.message?.includes('503') || apiErr.message?.includes('Overloaded')) {
+                        retryCount++;
+                        if (retryCount > maxRetries) throw apiErr;
+                        const waitTime = Math.pow(2, retryCount) * 1000; // 2s, 4s, 8s
+                        console.warn(`[Core] Gemini Overloaded (503). Retrying in ${waitTime}ms...`);
+                        await new Promise(r => setTimeout(r, waitTime));
+                    } else {
+                        throw apiErr;
+                    }
+                }
+            }
             const text = result.response.text();
 
             // Clean markdown syntax if present
