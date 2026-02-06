@@ -109,7 +109,7 @@ export class CoreEngine {
         const genAI = new GoogleGenerativeAI(googleKey);
         this.model = genAI.getGenerativeModel({
             model: 'gemini-2.0-flash',
-            systemInstruction: 'You are Momentum, a Shadow Developer agent. Your purpose is to unblock stagnant repositories with high-quality, actionable code changes. \n' +
+            systemInstruction: 'You are Momentum, a Shadow Developer agent powered by Gemini 2.0 Flash. Your purpose is to unblock stagnant repositories with high-quality, actionable code changes. \n' +
                 '1. ALWAYS start by listing the files in the repository if you don\'t have a clear idea of the structure.\n' +
                 '2. ALWAYS read the content of relevant files (package.json, README, or source files) before proposing a change.\n' +
                 '3. Propose a change that actually improves the repo (e.g., adding a test, fixing a bug, updating a dependency, adding a feature).\n' +
@@ -377,7 +377,7 @@ export class CoreEngine {
             const genAI = new GoogleGenerativeAI(googleKey);
             const dynamicModel = genAI.getGenerativeModel({
                 model: 'gemini-2.0-flash',
-                systemInstruction: 'You are Momentum, a Shadow Developer agent. Your purpose is to unblock stagnant repositories with high-quality, actionable code changes. \n' +
+                systemInstruction: 'You are Momentum, a Shadow Developer agent powered by Gemini 2.0 Flash. Your purpose is to unblock stagnant repositories with high-quality, actionable code changes. \n' +
                     '1. ALWAYS start by listing the files in the repository if you don\'t have a clear idea of the structure.\n' +
                     '2. ALWAYS read the content of relevant files (package.json, README, or source files) before proposing a change.\n' +
                     '3. Propose a change that actually improves the repo.\n' +
