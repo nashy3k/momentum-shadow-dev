@@ -197,8 +197,18 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
         const cmdInteraction = interaction as ChatInputCommandInteraction;
         // ACKNOWLEDGE IMMEDIATELY to prevent "Unknown interaction" (3s timeout)
         const sub = cmdInteraction.options.getSubcommand(false);
-        if (sub !== 'check') { // Check is fast, others might be slow interactions
-            await cmdInteraction.deferReply({ ephemeral: true });
+
+        // Safeguard Acknowledgement
+        if (sub !== 'check') {
+            try {
+                console.log(`[Bot] Acknowledging command '${sub}'...`);
+                // Use flags instead of boolean to fix deprecation warning
+                await cmdInteraction.deferReply({ flags: 64 }); // 64 = Ephemeral
+            } catch (err: any) {
+                console.warn(`[Bot] Failed to acknowledge interaction: ${err.message}`);
+                // If we can't acknowledge, we can't reply. Abort.
+                return;
+            }
         }
 
         if (cmdInteraction.commandName === 'momentum') {
