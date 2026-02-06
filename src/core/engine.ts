@@ -344,9 +344,7 @@ export class CoreEngine {
             let iter = 0;
             let currentMessage = prompt;
 
-            let fc: any = null;
-            let iter = 0;
-            let currentMessage = prompt;
+            // REMOVED DUPLICATE DECLARATIONS HERE
 
             while (iter < 25) {
                 let result: any;
