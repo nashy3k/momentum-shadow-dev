@@ -347,29 +347,6 @@ export class CoreEngine {
             let prompt = `Repository ${repoRef} is stagnant. \n\nContext:\n${context}\n\nPropose a high-impact improvement change now. Start by researching the repo structure.`;
             researchSpan.update({ input: { prompt } });
 
-            // SIMPLIFIED DEBUG MODE: Single API Call with Verbose Logging
-            // We removed the complex retry loop to isolate the API failure.
-            console.log(`[Core] DEBUG: Sending message to model ${dynamicModel.model}...`);
-
-            let result: any;
-            try {
-                result = await chat.sendMessage(currentMessage);
-                console.log('[Core] ✅ API Call Successful.');
-            } catch (err: any) {
-                console.error('------------------------------------------------');
-                console.error('[Core] 🚨 CRITICAL API ERROR 🚨');
-                console.error(`Message: ${err.message}`);
-                console.error(`Stack: ${err.stack}`);
-                console.error(`Full Error Object:`, JSON.stringify(err, null, 2));
-                console.error('------------------------------------------------');
-                // Don't swallow it, let it bubble up but logs are now visible
-                return null;
-            }
-
-            const part = result.response.candidates?.[0]?.content?.parts?.find((p: any) => p.functionCall);
-            fc = part?.functionCall;
-
-            if (!fc) break;
 
             let toolResult = 'Unknown tool error.';
 
