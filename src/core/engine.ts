@@ -474,7 +474,7 @@ export class CoreEngine {
             trace.update({ output: { error: e.message } });
             trace.end();
             await this.opik.flush();
-            return { isStagnant: false, repoRef: repoRef, status: 'FAILED', error: e.message };
+            return { isStagnant: false, repoRef: repoPath, status: 'FAILED', error: e.message };
         }
     }
 
