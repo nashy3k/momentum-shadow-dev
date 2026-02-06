@@ -189,6 +189,7 @@ export class CoreEngine {
         let repoRef = repoPath;
         let trace: any;
         let cycleId = '';
+        let daysSince = 0;
 
         try {
             // Initialize Opik safely
@@ -249,7 +250,7 @@ export class CoreEngine {
                 lastCommitTime = parseInt(out) * 1000;
             }
 
-            const daysSince = (Date.now() - lastCommitTime) / (24 * 60 * 60 * 1000);
+            daysSince = (Date.now() - lastCommitTime) / (24 * 60 * 60 * 1000);
             const isStagnant = daysSince > 3;
 
             checkSpan.update({ output: { isStagnant, daysSince, repoRef } });
