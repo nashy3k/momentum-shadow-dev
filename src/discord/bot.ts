@@ -14,39 +14,7 @@ const log = (msg: string) => {
     console.log(msg);
 };
 
-log('[Bot] Startup Purge Initiated...');
-
-// SIBLING PURGE: Kill any other tsx/bot.ts processes EXCEPT this process tree
-try {
-    const myPid = process.pid;
-    const parentPid = process.ppid;
-    // Get Grandparent PID to ensure we don't kill the 'npx' or 'npm' wrapper
-    let grandParentPid = '';
-    try {
-        grandParentPid = execSync(`ps -p ${parentPid} -o ppid=`, { encoding: 'utf-8' }).trim();
-    } catch (e) { }
-
-    // Find pids of other processes matching the bot path
-    const otherPids = execSync(`pgrep -f "src/discord/bot.ts"`, { encoding: 'utf-8' })
-        .split('\n')
-        .map(p => p.trim())
-        .filter(p => {
-            if (!p) return false;
-            const pid = parseInt(p);
-            return pid !== myPid &&
-                pid !== parentPid &&
-                (grandParentPid === '' || pid !== parseInt(grandParentPid));
-        });
-
-    if (otherPids.length > 0) {
-        log(`[Bot] Found ${otherPids.length} ghost processes. Purging...`);
-        otherPids.forEach(p => {
-            try { execSync(`kill -9 ${p}`); } catch (e) { }
-        });
-    }
-} catch (e) {
-    // pgrep fails if no results, which is fine
-}
+log(`[Bot] PID: ${process.pid} | Parent PID: ${process.ppid}`);
 
 dotenv.config({ override: true });
 
