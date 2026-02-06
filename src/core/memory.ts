@@ -36,7 +36,7 @@ export class MemoryManager {
         // Fallback catch-all for embedding failure
         try {
             // Use the string reference which is more robust than the object import in some versions
-            const modelName = 'googleai/text-embedding-004';
+            const modelName = 'googleai/gemini-embedding-001';
             const result = await ai.embed({
                 embedder: modelName,
                 content: text,
