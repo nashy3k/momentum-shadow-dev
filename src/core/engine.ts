@@ -370,9 +370,17 @@ export class CoreEngine {
                             // but since 'chat' is stateful, we must restart the chat session.
                             console.log('[Core] Restarting chat session with stable model...');
                             const newChat = stableModel.startChat({ tools: [{ functionDeclarations: this.getTools() as any }] });
-                            // Note: In a deep loop we might lose history here, but usually this error happens on the FIRST message.
-                            result = await newChat.sendMessage(prompt);
-                            break;
+
+                            try {
+                                // Note: In a deep loop we might lose history here, but usually this error happens on the FIRST message.
+                                result = await newChat.sendMessage(prompt);
+                                console.log('[Core] ✅ Fallback Safe Mode successful.');
+                                break;
+                            } catch (fallbackErr: any) {
+                                console.error('[Core] ❌ Fallback Model also failed:', fallbackErr.message);
+                                console.error('[Core Debug] Full API Error:', JSON.stringify(fallbackErr, null, 2));
+                                throw fallbackErr; // Propagate to main error handler
+                            }
                         }
 
                         // Scenario 2: Overloaded (503) -> WAITING
