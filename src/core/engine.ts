@@ -376,7 +376,7 @@ export class CoreEngine {
             const googleKey = process.env.GOOGLE_API_KEY || '';
             const genAI = new GoogleGenerativeAI(googleKey);
             const dynamicModel = genAI.getGenerativeModel({
-                model: 'gemini-1.5-flash',
+                model: 'gemini-2.0-flash-exp',
                 systemInstruction: 'You are Momentum, a Shadow Developer agent. Your purpose is to unblock stagnant repositories with high-quality, actionable code changes. \n' +
                     '1. ALWAYS start by listing the files in the repository if you don\'t have a clear idea of the structure.\n' +
                     '2. ALWAYS read the content of relevant files (package.json, README, or source files) before proposing a change.\n' +
