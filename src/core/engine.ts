@@ -108,7 +108,7 @@ export class CoreEngine {
 
         const genAI = new GoogleGenerativeAI(googleKey);
         this.model = genAI.getGenerativeModel({
-            model: 'gemini-2.0-flash-exp',
+            model: 'gemini-3-flash-preview',
             systemInstruction: 'You are Momentum, a Shadow Developer agent. Your purpose is to unblock stagnant repositories with high-quality, actionable code changes. \n' +
                 '1. ALWAYS start by listing the files in the repository if you don\'t have a clear idea of the structure.\n' +
                 '2. ALWAYS read the content of relevant files (package.json, README, or source files) before proposing a change.\n' +
@@ -117,7 +117,7 @@ export class CoreEngine {
         });
 
         this.evaluator = genAI.getGenerativeModel({
-            model: 'gemini-2.0-flash-exp',
+            model: 'gemini-3-flash-preview',
             systemInstruction: 'You are the Senior Software Architect. Your job is to EVALUATE code proposals from a junior developer.\n' +
                 'Rubric:\n' +
                 '1. Safety: Does this code delete data or break the build? (Fail if unsafe)\n' +
@@ -344,8 +344,51 @@ export class CoreEngine {
             let iter = 0;
             let currentMessage = prompt;
 
+            let fc: any = null;
+            let iter = 0;
+            let currentMessage = prompt;
+
             while (iter < 25) {
-                const result = await chat.sendMessage(currentMessage);
+                let result: any;
+                let retryCount = 0;
+
+                // ROBUST API CALL: Retry with Exponential Backoff + Model Fallback
+                while (true) {
+                    try {
+                        result = await chat.sendMessage(currentMessage);
+                        break;
+                    } catch (apiErr: any) {
+                        const errMsg = apiErr.message || '';
+
+                        // Scenario 1: Model Not Found (404) -> IMMEDIATE DOWNGRADE
+                        if (errMsg.includes('404') || errMsg.includes('not found')) {
+                            console.warn(`[Core] ⚠️ Model ${dynamicModel.model} NOT FOUND (404). Switching to stable fallback: gemini-2.0-flash-exp...`);
+                            const stableModel = genAI.getGenerativeModel({
+                                model: 'gemini-2.0-flash-exp',
+                                systemInstruction: dynamicModel.systemInstruction // Keep original system prompt
+                            });
+                            // HACK: Re-initialize chat with stable model and replay history if needed.
+                            // For simplicity/speed in this loop, we just re-cast the chat object if the SDK allows, 
+                            // but since 'chat' is stateful, we must restart the chat session.
+                            console.log('[Core] Restarting chat session with stable model...');
+                            const newChat = stableModel.startChat({ tools: [{ functionDeclarations: this.getTools() as any }] });
+                            // Note: In a deep loop we might lose history here, but usually this error happens on the FIRST message.
+                            result = await newChat.sendMessage(prompt);
+                            break;
+                        }
+
+                        // Scenario 2: Overloaded (503) -> WAITING
+                        if (errMsg.includes('503') || errMsg.includes('Overloaded')) {
+                            retryCount++;
+                            if (retryCount > 3) throw apiErr;
+                            console.log(`[Core] API Overloaded (503). Retrying in ${Math.pow(2, retryCount)}s...`);
+                            await new Promise(r => setTimeout(r, Math.pow(2, retryCount) * 1000));
+                        } else {
+                            throw apiErr;
+                        }
+                    }
+                }
+
                 const part = result.response.candidates?.[0]?.content?.parts?.find((p: any) => p.functionCall);
                 fc = part?.functionCall;
 
