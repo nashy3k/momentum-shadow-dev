@@ -2,6 +2,38 @@
 console.log('--- BOT PROCESS STARTING ---');
 
 import * as dotenv from 'dotenv';
+import { execSync } from 'child_process';
+import * as fs from 'fs';
+import * as path from 'path';
+
+// EMERGENCY LOGGING (Bypass stdout buffering)
+const EMERGENCY_LOG = '/dev/shm/momentum-debug.log';
+const log = (msg: string) => {
+    const entry = `${new Date().toISOString()}: ${msg}\n`;
+    try { fs.appendFileSync(EMERGENCY_LOG, entry); } catch (e) { }
+    console.log(msg);
+};
+
+log('[Bot] Startup Purge Initiated...');
+
+// SIBLING PURGE: Kill any other tsx/bot.ts processes EXCEPT this process tree
+try {
+    const myPid = process.pid;
+    // Find pids of other tsx processes running bot.ts
+    const otherPids = execSync(`pgrep -f "src/discord/bot.ts"`, { encoding: 'utf-8' })
+        .split('\n')
+        .filter(p => p && parseInt(p) !== myPid && parseInt(p) !== process.ppid);
+
+    if (otherPids.length > 0) {
+        log(`[Bot] Found ${otherPids.length} ghost processes. Purging...`);
+        otherPids.forEach(p => {
+            try { execSync(`kill -9 ${p}`); } catch (e) { }
+        });
+    }
+} catch (e) {
+    // pgrep fails if no results, which is fine
+}
+
 dotenv.config({ override: true });
 
 // 2. Global Logging Setup
@@ -14,14 +46,15 @@ console.log = (...args) => originalLog(getTimestamp(), ...args);
 console.error = (...args) => originalError(getTimestamp(), ...args);
 console.warn = (...args) => originalWarn(getTimestamp(), ...args);
 
-console.log('[Bot] 💓 HEARTBEAT: Logging system ready.');
+log('[Bot] 💓 HEARTBEAT: Logging system ready.');
 
 // 3. Early Error Catching
 process.on('uncaughtException', (err) => {
-    console.error('[(CRITICAL) Uncaught Exception] The bot crashed:', err);
+    log(`[(CRITICAL) Uncaught Exception] The bot crashed: ${err.message}`);
+    console.error(err);
 });
 process.on('unhandledRejection', (reason, promise) => {
-    console.error('[(CRITICAL) Unhandled Rejection] at:', promise, 'reason:', reason);
+    log(`[(CRITICAL) Unhandled Rejection] at: ${promise} reason: ${reason}`);
 });
 
 // 4. Imports
@@ -40,8 +73,6 @@ import {
     type ChatInputCommandInteraction,
     type ButtonInteraction
 } from 'discord.js';
-import * as fs from 'fs';
-import * as path from 'path';
 import { CoreEngine } from '../core/engine.js';
 import type { MomentumProposal } from '../core/engine.js';
 import * as cron from 'node-cron';
