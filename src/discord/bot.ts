@@ -214,12 +214,15 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
         if (sub !== 'check') {
             try {
                 console.log(`[Bot] Acknowledging command '${sub}'...`);
-                // Use flags instead of boolean to fix deprecation warning
-                await cmdInteraction.deferReply({ flags: 64 }); // 64 = Ephemeral
+
+                // FORCE TIMEOUT: If Discord doesn't ack in 5s, fail.
+                const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('DeferReply Timed Out')), 5000));
+                const ack = cmdInteraction.deferReply({ ephemeral: true });
+
+                await Promise.race([ack, timeout]);
                 console.log(`[Bot] Acknowledgement SUCCESS for '${sub}'.`); // CHECKPOINT 1
             } catch (err: any) {
                 console.warn(`[Bot] Failed to acknowledge interaction: ${err.message}`);
-                // If we can't acknowledge, we can't reply. Abort.
                 return;
             }
         }
