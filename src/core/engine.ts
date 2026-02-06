@@ -360,9 +360,9 @@ export class CoreEngine {
 
                         // Scenario 1: Model Not Found (404) -> IMMEDIATE DOWNGRADE
                         if (errMsg.includes('404') || errMsg.includes('not found')) {
-                            console.warn(`[Core] ⚠️ Model ${dynamicModel.model} NOT FOUND (404). Switching to stable fallback: gemini-2.0-flash-exp...`);
+                            console.warn(`[Core] ⚠️ Model ${dynamicModel.model} NOT FOUND (404). Switching to stable fallback: gemini-1.5-flash...`);
                             const stableModel = genAI.getGenerativeModel({
-                                model: 'gemini-2.0-flash-exp',
+                                model: 'gemini-1.5-flash',
                                 systemInstruction: dynamicModel.systemInstruction || '' // Safely handle undefined type
                             });
                             // HACK: Re-initialize chat with stable model and replay history if needed.
