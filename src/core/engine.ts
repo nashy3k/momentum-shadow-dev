@@ -308,9 +308,13 @@ export class CoreEngine {
 
             // FETCH MEMORIES & SKILLS (The Recall)
             console.log('[Core] Recalling past experiences and documentation...');
+
+            let memoryContext = '';
+            let skills = '';
+
             try {
                 const pastMemories = await this.memory.search(repoRef, 3);
-                const skills = await this.loadSkills();
+                skills = await this.loadSkills();
 
                 console.log(`[Core] "The Recall" complete: Recalled ${pastMemories.length} memories and active expert skills.`);
 
