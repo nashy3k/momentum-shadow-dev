@@ -280,6 +280,11 @@ client.once(Events.ClientReady, c => {
     console.log(`Ready! Logged in as ${c.user.tag}`);
     console.log(`Joined Guilds: ${c.guilds.cache.map(g => g.name).join(', ') || 'NONE'}`);
 
+    if (c.user.id !== clientId) {
+        console.error(`[CRITICAL] Client ID Mismatch! Hardcoded: ${clientId} vs Token: ${c.user.id}`);
+        console.error('Commands registered with the wrong ID will NOT work!');
+    }
+
     c.user.setPresence({
         activities: [{ name: 'Momentum Assistant', type: 3 }], // Type 3 is WATCHING
         status: 'online'
@@ -287,6 +292,8 @@ client.once(Events.ClientReady, c => {
 });
 
 client.on(Events.InteractionCreate, async (interaction: Interaction) => {
+    console.log(`[Bot] ⚡ Interaction received: ${interaction.type} | ID: ${interaction.id}`);
+
     if (interaction.isChatInputCommand()) {
         const cmdInteraction = interaction as ChatInputCommandInteraction;
 
