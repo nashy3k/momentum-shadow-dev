@@ -363,7 +363,7 @@ export class CoreEngine {
                             console.warn(`[Core] ⚠️ Model ${dynamicModel.model} NOT FOUND (404). Switching to stable fallback: gemini-2.0-flash-exp...`);
                             const stableModel = genAI.getGenerativeModel({
                                 model: 'gemini-2.0-flash-exp',
-                                systemInstruction: dynamicModel.systemInstruction // Keep original system prompt
+                                systemInstruction: dynamicModel.systemInstruction || '' // Safely handle undefined type
                             });
                             // HACK: Re-initialize chat with stable model and replay history if needed.
                             // For simplicity/speed in this loop, we just re-cast the chat object if the SDK allows, 
