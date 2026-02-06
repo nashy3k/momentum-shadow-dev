@@ -24,9 +24,21 @@ const originalError = console.error;
 const originalWarn = console.warn;
 const getTimestamp = () => new Date().toISOString() + ': ';
 
-console.log = (...args) => originalLog(getTimestamp(), ...args);
-console.error = (...args) => originalError(getTimestamp(), ...args);
-console.warn = (...args) => originalWarn(getTimestamp(), ...args);
+console.log = (...args) => {
+    const msg = getTimestamp() + args.map(a => String(a)).join(' ');
+    try { fs.appendFileSync(EMERGENCY_LOG, msg + '\n'); } catch (e) { }
+    originalLog(msg);
+};
+console.error = (...args) => {
+    const msg = getTimestamp() + '[ERROR] ' + args.map(a => String(a)).join(' ');
+    try { fs.appendFileSync(EMERGENCY_LOG, msg + '\n'); } catch (e) { }
+    originalError(msg);
+};
+console.warn = (...args) => {
+    const msg = getTimestamp() + '[WARN] ' + args.map(a => String(a)).join(' ');
+    try { fs.appendFileSync(EMERGENCY_LOG, msg + '\n'); } catch (e) { }
+    originalWarn(msg);
+};
 
 log('[Bot] 💓 HEARTBEAT: Logging system ready.');
 
