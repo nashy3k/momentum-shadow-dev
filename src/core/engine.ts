@@ -146,7 +146,48 @@ export class CoreEngine {
         }
     }
 
-    private getTools() {
+    private getTools(modelTier: 'flash' | 'pro' = 'flash') {
+        // TIER 1: FLASH (Simplified Schema to prevent hallucinations/timeouts)
+        if (modelTier === 'flash') {
+            return [
+                {
+                    name: 'researchRepo',
+                    description: 'Suggests a repo improvement. Call this ONLY after you have a specific plan.',
+                    parameters: {
+                        type: SchemaType.OBJECT,
+                        properties: {
+                            targetFile: { type: SchemaType.STRING, description: 'File path to modify.' },
+                            description: { type: SchemaType.STRING, description: 'Summary of the change.' },
+                            codeChange: { type: SchemaType.STRING, description: 'The code to apply.' },
+                        },
+                        required: ['targetFile', 'description', 'codeChange'],
+                    },
+                },
+                {
+                    name: 'listFiles',
+                    description: 'List files in a directory.',
+                    parameters: {
+                        type: SchemaType.OBJECT,
+                        properties: {
+                            path: { type: SchemaType.STRING, description: 'Directory path (default root)' }
+                        }
+                    }
+                },
+                {
+                    name: 'getFile',
+                    description: 'Read file content.',
+                    parameters: {
+                        type: SchemaType.OBJECT,
+                        properties: {
+                            path: { type: SchemaType.STRING, description: 'File path.' }
+                        },
+                        required: ['path']
+                    }
+                }
+            ];
+        }
+
+        // TIER 2: PRO (Full Schema - Reserved for Gemini 3.0)
         return [
             {
                 name: 'researchRepo',
@@ -161,6 +202,7 @@ export class CoreEngine {
                     required: ['targetFile', 'description', 'codeChange'],
                 },
             },
+            // ... (Other tools identical for now, but extensible)
             {
                 name: 'listFiles',
                 description: 'List contents of a directory in the repo.',
@@ -360,9 +402,25 @@ export class CoreEngine {
 
                 let result: any;
                 try {
-                    result = await chat.sendMessage(currentMessage);
+                    // UNIVERSAL SAFETY: 30s Timeout to prevent "Zombie Hangs"
+                    const timeoutPromise = new Promise((_, reject) =>
+                        setTimeout(() => reject(new Error('Genkit API Timeout (30s)')), 30000)
+                    );
+
+                    console.log(`[Core] ⏳ Sending message (Timeout: 30s)...`);
+                    result = await Promise.race([
+                        chat.sendMessage(currentMessage),
+                        timeoutPromise
+                    ]);
+
                     console.log('[Core] ✅ API Call Successful.');
                 } catch (err: any) {
+                    // If timeout, we treat it as a fail state immediately
+                    if (err.message.includes('Timeout')) {
+                        console.error('[Core] ⏱️ API TIMEOUT - The model took too long to respond.');
+                        return { isStagnant: false, repoRef, status: 'FAILED', error: 'Model Timeout (Possible Hallucination Loop)' };
+                    }
+
                     console.error('------------------------------------------------');
                     console.error('[Core] 🚨 CRITICAL API ERROR 🚨');
                     console.error(`Message: ${err.message}`);
