@@ -485,7 +485,7 @@ async function runPatrol() {
                                 { name: 'Brain Suggestion', value: result.proposal.description },
                                 { name: 'Target File', value: result.proposal.targetFile }
                             )
-                            .setFooter({ text: 'Momentum Shadow Developer • Gemini 1.5 Flash' });
+                            .setFooter({ text: 'Momentum Shadow Developer • Gemini 3 Flash' });
 
                         const row = new ActionRowBuilder<ButtonBuilder>()
                             .addComponents(
