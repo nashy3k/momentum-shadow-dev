@@ -7,7 +7,7 @@ dotenv.config({ override: true });
 
 const ai = genkit({
     plugins: [googleAI()],
-    model: 'googleai/gemini-2.0-flash-exp', // Note: Genkit uses gemini-2.0-flash-exp for the Gemini 3.0 equivalent currently or users can specify.
+    model: 'googleai/gemini-1.5-flash', // Fallback to stable 1.5 Flash
 });
 
 export interface Memory {
@@ -33,15 +33,16 @@ export class MemoryManager {
      * Converts text into a vector embedding using text-embedding-004
      */
     async embed(text: string): Promise<number[]> {
+        // Fallback catch-all for embedding failure
         try {
+            // Use the string reference which is more robust than the object import in some versions
+            const modelName = 'googleai/text-embedding-004';
             const result = await ai.embed({
-                embedder: textEmbedding004,
+                embedder: modelName,
                 content: text,
             });
-            if (!result || result.length === 0) throw new Error('Embedding failed: No result from LLM');
-            const first = result[0];
-            if (!first) throw new Error('Embedding failed: Result part is null');
-            return first.embedding as number[];
+            if (!result || result.length === 0) return [];
+            return result[0]?.embedding || [];
         } catch (err: any) {
             console.error('[Memory] ⚠️ Embedding API Failed:', err.message);
             return []; // Return empty vector on failure (graceful degradation)

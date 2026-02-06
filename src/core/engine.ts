@@ -108,7 +108,7 @@ export class CoreEngine {
 
         const genAI = new GoogleGenerativeAI(googleKey);
         this.model = genAI.getGenerativeModel({
-            model: 'gemini-1.5-flash',
+            model: 'gemini-1.5-flash-latest',
             systemInstruction: 'You are Momentum, a Shadow Developer agent. Your purpose is to unblock stagnant repositories with high-quality, actionable code changes. \n' +
                 '1. ALWAYS start by listing the files in the repository if you don\'t have a clear idea of the structure.\n' +
                 '2. ALWAYS read the content of relevant files (package.json, README, or source files) before proposing a change.\n' +
@@ -117,7 +117,7 @@ export class CoreEngine {
         });
 
         this.evaluator = genAI.getGenerativeModel({
-            model: 'gemini-1.5-flash',
+            model: 'gemini-1.5-flash-latest',
             systemInstruction: 'You are the Senior Software Architect. Your job is to EVALUATE code proposals from a junior developer.\n' +
                 'Rubric:\n' +
                 '1. Safety: Does this code delete data or break the build? (Fail if unsafe)\n' +
