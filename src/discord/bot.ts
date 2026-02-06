@@ -473,4 +473,74 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
     }
 });
 
+// --- MISSING ROUTINES RESTORED ---
+
+async function runPatrol() {
+    console.log('[Bot] 🛡️ PATROL STARTED manually.');
+    try {
+        const repos = await engine.listRepos();
+        console.log(`[Bot] Found ${repos.length} repos to check.`);
+
+        if (repos.length === 0) {
+            console.warn('[Bot] ⚠️ No repos found in DB. Use /momentum track to add one.');
+        }
+
+        for (const repo of repos) {
+            const repoRef = repo.repoRef || repo.id;
+            // Only patrol if it has a discord channel connected
+            if (repo.discordChannelId) {
+                console.log(`[Bot] Patrolling ${repoRef}...`);
+                const fakeJob = { repoRef, discordChannelId: repo.discordChannelId, id: 'manual-run' };
+                // Call the scheduler's logic manually
+                // We reuse the logic inside the cron job by extracting it or just calling engine.plan directly
+                const result = await engine.plan(repoRef);
+                if (result.isStagnant && result.proposal) {
+                    // We need to fetch the channel and send the embed, same as the cron job
+                    const channel = await client.channels.fetch(repo.discordChannelId);
+                    if (channel?.isTextBased()) {
+                        const proposalId = Math.random().toString(36).substring(7);
+                        pendingProposals.set(proposalId, result.proposal);
+                        const embed = new EmbedBuilder()
+                            .setColor(0x0099FF)
+                            .setTitle('🚨 Manual Patrol: Stagnation Detected!')
+                            .setDescription(`The repository **${result.repoRef}** has been inactive for **${result.daysSince?.toFixed(1) || '3+'}** days.`)
+                            .addFields(
+                                { name: 'Brain Suggestion', value: result.proposal.description },
+                                { name: 'Target File', value: result.proposal.targetFile }
+                            )
+                            .setFooter({ text: 'Momentum Shadow Developer • Gemini 1.5 Flash' });
+
+                        const row = new ActionRowBuilder<ButtonBuilder>()
+                            .addComponents(
+                                new ButtonBuilder().setCustomId(`approve_${proposalId}`).setLabel('Approve & Push').setStyle(ButtonStyle.Success),
+                                new ButtonBuilder().setCustomId(`reject_${proposalId}`).setLabel('Reject').setStyle(ButtonStyle.Danger)
+                            );
+
+                        await (channel as any).send({ embeds: [embed], components: [row] });
+                        console.log(`[Bot] Alert sent to channel for ${repoRef}`);
+                    }
+                } else {
+                    console.log(`[Bot] ${repoRef} is active or healthy.`);
+                }
+            }
+        }
+    } catch (e: any) {
+        console.error('[Bot] Patrol failed:', e.message);
+    }
+}
+
+async function runMaintenance() {
+    console.log('[Bot] 🔧 MAINTENANCE STARTED.');
+    try {
+        const repos = await engine.listRepos();
+        for (const repo of repos) {
+            const repoRef = repo.repoRef || repo.id;
+            console.log(`[Bot] Syncing metadata for ${repoRef}...`);
+            await engine.plan(repoRef, { discordChannelId: repo.discordChannelId }, { maintenanceOnly: true });
+        }
+    } catch (e) {
+        console.error('[Bot] Maintenance failed:', e);
+    }
+}
+
 client.login(token);
