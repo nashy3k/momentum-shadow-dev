@@ -36,6 +36,7 @@ export interface MomentumResult {
     status: 'ACTIVE' | 'STAGNANT_PLANNING' | 'COMPLETE' | 'FAILED';
     error?: string;
     evaluation?: EvaluationResult;
+    proposalId?: string | null;
 }
 
 export interface EvaluationResult {
@@ -125,6 +126,57 @@ export class CoreEngine {
                 '3. Quality: Is the code idiomatic and correct?\n' +
                 'Output JSON: { "score": number (1-10), "reasoning": string, "isSafe": boolean }'
         });
+    }
+
+    /**
+     * Sends manual feedback to an Opik trace (e.g., from Discord Approve/Reject)
+     */
+    async updateOpikFeedback(traceId: string, score: number, name: string = 'human-feedback') {
+        if (!process.env.OPIK_API_KEY || !traceId) return;
+
+        console.log(`[Core] Sending Opik feedback: ${name}=${score} for trace ${traceId}`);
+        const url = 'https://www.comet.com/opik/api/v1/feedback-scores';
+        try {
+            await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': process.env.OPIK_API_KEY || '',
+                    'Content-Type': 'application/json',
+                    'Comet-Workspace': process.env.OPIK_WORKSPACE || 'momentum'
+                },
+                body: JSON.stringify({
+                    trace_id: traceId,
+                    name: name,
+                    value: score
+                })
+            });
+        } catch (err: any) {
+            console.warn('[Core] Failed to send Opik feedback:', err.message);
+        }
+    }
+
+    /**
+     * Persists a proposal to the 'proposals' collection for the dashboard history.
+     */
+    async saveProposalRecord(proposal: MomentumProposal, status: 'PENDING' | 'ACCEPTED' | 'REJECTED', evaluation: EvaluationResult) {
+        if (!this.dbEnabled || !this.db) return null;
+
+        const data = {
+            ...proposal,
+            status,
+            evaluation,
+            timestamp: FieldValue.serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp()
+        };
+
+        try {
+            const docRef = await this.db.collection('proposals').add(data);
+            console.log(`[Core] Proposal recorded in history: ${docRef.id}`);
+            return docRef.id;
+        } catch (err: any) {
+            console.error('[Core] Failed to save proposal record:', err.message);
+            return null;
+        }
     }
 
     private async loadSkills(): Promise<string> {
@@ -523,10 +575,13 @@ export class CoreEngine {
                 ...(metadata || {})
             });
 
+            // Persist to history feed
+            const proposalId = await this.saveProposalRecord(proposal, 'PENDING', evaluation);
+
             trace.update({ output: finalRes as any });
             trace.end();
             await this.opik.flush();
-            return finalRes;
+            return { ...finalRes, proposalId: proposalId ?? null };
 
         } catch (e: any) {
             console.error('[Core Error] plan failed:', e.message);
@@ -599,6 +654,25 @@ export class CoreEngine {
                     lastPush: FieldValue.serverTimestamp(),
                     lastIssueUrl: issueUrl
                 });
+
+                // Update proposal status in history
+                if (proposal.originTraceId) {
+                    const proposalsCol = this.db!.collection('proposals');
+                    const snap = await proposalsCol
+                        .where('originTraceId', '==', proposal.originTraceId)
+                        .limit(1)
+                        .get();
+                    if (!snap.empty) {
+                        await snap.docs[0]!.ref.update({
+                            status: 'ACCEPTED',
+                            issueUrl: issueUrl,
+                            updatedAt: FieldValue.serverTimestamp()
+                        });
+                    }
+
+                    // Send Opik Feedback
+                    await this.updateOpikFeedback(proposal.originTraceId, 1.0, 'acceptance');
+                }
             }
 
             trace.update({ output: { status: 'COMPLETE', issueUrl } });
@@ -637,5 +711,16 @@ export class CoreEngine {
         if (!this.dbEnabled || !this.db) return { success: false, error: 'Database not enabled.' };
         await this.db.collection('users').doc(email).set({ discordId, email, linkedAt: FieldValue.serverTimestamp() }, { merge: true });
         return { success: true };
+    }
+
+    async monitorRepo(repoPath: string, discordChannelId: string) {
+        if (!this.dbEnabled || !this.db) return { success: false, error: 'Database not enabled.' };
+        const repoRef = repoPath.includes('github.com') ? (repoPath.match(/github\.com\/([^\\/]+\/[^\\/]+)/)?.[1] || repoPath) : repoPath;
+        await this.upsertRepoDoc(repoRef, {
+            discordChannelId,
+            status: 'ACTIVE',
+            lastPatrolAt: FieldValue.serverTimestamp()
+        });
+        return { success: true, repoRef };
     }
 }

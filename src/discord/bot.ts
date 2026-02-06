@@ -6,6 +6,9 @@ import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { getFirestore, FieldValue, Firestore } from 'firebase-admin/firestore';
+import { MemoryManager } from '../core/memory.js';
+
 // EMERGENCY LOGGING (Bypass stdout buffering)
 const EMERGENCY_LOG = '/dev/shm/momentum-debug.log';
 const log = (msg: string) => {
@@ -200,6 +203,9 @@ client.once(Events.ClientReady, c => {
         activities: [{ name: 'Momentum Assistant', type: 3 }], // Type 3 is WATCHING
         status: 'online'
     });
+
+    // Start Patron Request Listener
+    watchPatronRequests();
 });
 
 client.on(Events.InteractionCreate, async (interaction: Interaction) => {
@@ -262,7 +268,7 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
                 console.log('[Bot] Triggering runPatrol()...'); // CHECKPOINT 4
                 await runPatrol();
                 console.log('[Bot] runPatrol() returned.'); // CHECKPOINT 5
-            } else if (subcommand === 'untrack') {
+            } else if (subcommand === 'track') {
                 const repoInput = cmdInteraction.options.getString('repo')!.trim();
 
                 // Hard check for common "command as argument" mistakes
@@ -426,25 +432,63 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
                 });
             }
         } else {
-            if (proposalId && proposal) {
-                // AUTO-LEARNING: Save human rejection as a "Negative Memory"
-                engine.memory.addMemory(
-                    `HUMAN REJECTION: User rejected proposal for ${proposal.repoRef}.\n` +
-                    `Reason: Manual intervention.\n` +
-                    `Proposed Change: ${proposal.description}`,
-                    'negative',
-                    proposal.repoRef
-                ).then(() => {
-                    console.log(`[Bot] Learning from human rejection: ${proposal.repoRef}`);
-                }).catch(err => console.error('[Bot] Failed to save rejection memory:', err));
+            // Update proposal status in history
+            if (proposal.originTraceId) {
+                (async () => {
+                    const snap = await (engine as any).db.collection('proposals')
+                        .where('originTraceId', '==', proposal.originTraceId)
+                        .limit(1)
+                        .get();
+                    if (!snap.empty) {
+                        await snap.docs[0].ref.update({
+                            status: 'REJECTED',
+                            updatedAt: FieldValue.serverTimestamp()
+                        });
+                    }
 
-                pendingProposals.delete(proposalId);
+                    // Send Opik Feedback
+                    await engine.updateOpikFeedback(proposal.originTraceId!, 0.0, 'rejection');
+                })().catch(err => console.error('[Bot] Failed to update rejection status:', err));
             }
+
+            pendingProposals.delete(proposalId);
             await btnInteraction.update({
                 content: '❌ **Proposal Rejected.** (Momentum has learned from this rejection 🧠)',
                 components: [],
-                embeds: btnInteraction.message.embeds
+                embeds: btnInteraction.message.embeds as any
             });
+        }
+
+        // Handle Patron Requests
+        if (action === 'approve' && btnInteraction.customId.includes('_patron_')) {
+            const requestId = btnInteraction.customId.split('_patron_')[1];
+            await btnInteraction.update({ content: '⚙️ **Processing Patron Request...**', components: [] });
+
+            try {
+                const snap = await (engine as any).db.collection('patron_requests').doc(requestId).get();
+                if (!snap.exists) return btnInteraction.editReply('❌ Request not found.');
+
+                const data = snap.data();
+                const result = await engine.monitorRepo(data.repoRef, btnInteraction.channelId);
+
+                await snap.ref.update({ status: 'APPROVED', updatedAt: FieldValue.serverTimestamp() });
+
+                await btnInteraction.editReply({
+                    content: `✅ **Patronage Accepted!** Now monitoring: **${result.repoRef}**.`,
+                    embeds: btnInteraction.message.embeds
+                });
+            } catch (err: any) {
+                await btnInteraction.editReply(`❌ **Failed to approve:** ${err.message}`);
+            }
+        }
+
+        if (action === 'reject' && btnInteraction.customId.includes('_patron_')) {
+            const requestId = btnInteraction.customId.split('_patron_')[1];
+            await (engine as any).db.collection('patron_requests').doc(requestId).update({
+                status: 'REJECTED',
+                updatedAt: FieldValue.serverTimestamp()
+            });
+            await btnInteraction.update({ content: '🚫 **Patron Request Deflected.**', components: [], embeds: [] });
         }
     }
 });
@@ -519,6 +563,57 @@ async function runMaintenance() {
     } catch (e) {
         console.error('[Bot] Maintenance failed:', e);
     }
+}
+
+async function watchPatronRequests() {
+    log('[Bot] 🛡️ Starting Patron Request Listener...');
+    const db = (engine as any).db as Firestore;
+    if (!db) return;
+
+    db.collection('patron_requests').where('status', '==', 'PENDING').onSnapshot(snapshot => {
+        snapshot.docChanges().forEach(async change => {
+            if (change.type === 'added') {
+                const data = change.doc.data();
+                const requestId = change.doc.id;
+
+                log(`[Bot] New Patron Request: ${data.repoRef}`);
+
+                // Find admin channel (#command-center or similar)
+                const adminChannel = client.channels.cache.find(c =>
+                    (c as any).name === 'command-center' || (c as any).name === 'admin-logs' || (c as any).name === 'momentum-admin'
+                );
+
+                if (adminChannel?.isTextBased()) {
+                    const embed = new EmbedBuilder()
+                        .setColor('#6366f1')
+                        .setTitle('📥 New Patronage Request')
+                        .setDescription(`A guest has requested a Momentum patrol for: **${data.repoRef}**`)
+                        .addFields(
+                            { name: 'Repository', value: `\`${data.repoRef}\`` },
+                            { name: 'Requested At', value: data.requestedAt || 'Unknown' }
+                        )
+                        .setTimestamp()
+                        .setFooter({ text: 'Momentum | Community Request' });
+
+                    const row = new ActionRowBuilder<ButtonBuilder>()
+                        .addComponents(
+                            new ButtonBuilder()
+                                .setCustomId(`approve_patron_${requestId}`)
+                                .setLabel('Accept Request')
+                                .setStyle(ButtonStyle.Primary),
+                            new ButtonBuilder()
+                                .setCustomId(`reject_patron_${requestId}`)
+                                .setLabel('Deflect')
+                                .setStyle(ButtonStyle.Secondary)
+                        );
+
+                    await (adminChannel as any).send({ embeds: [embed], components: [row] });
+                } else {
+                    log('[Bot] ⚠️ Could not find an admin channel (#command-center) for patronage alert.');
+                }
+            }
+        });
+    });
 }
 
 client.login(token);

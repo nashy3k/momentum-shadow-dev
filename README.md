@@ -63,7 +63,12 @@ graph TD
     subgraph "Action Phase"
         Score -->|"Yes"| Discord[Discord Bot]
         Sync -->|Update Metadata| DB[("Google Firestore")]
-        Discord -->|"4. Push Notification"| UserEnd
+        Discord -->|"4. Human Review"| UserReview(["Accept / Reject"])
+        UserReview -->|"Approve"| Push[Execute Shadow PR]
+        UserReview -->|"Reject"| LearnH[Save Negative Memory]
+        UserReview -->|"Feed Score"| OpikFB[["Opik Feedback (0.0/1.0)"]]
+        Push -->|"ACCEPTED"| History[("Decision History Feed")]
+        LearnH --> History
     end
 
     style Evaluator fill:#2d1b4e,stroke:#9d4edd,stroke-width:2px
@@ -99,12 +104,16 @@ Momentum is not a black box. Every decision is fully traceable using **Comet Opi
 Each patrol cycle generates a structured trace linked directly to the repository:
 
 *   **`momentum-plan`** (Root): Tracks the overall latency (e.g., 24.5s) and cost.
-    *   **`pulse-check`** (Span): GitHub API overhead and stagnation logic.
     *   **`brain-research`** (Span): The Junior Dev's iterative research tool calls (`listFiles`, `readFile`).
     *   **`momentum-evaluate`** (Span): The Senior Dev's rubric evaluation and score.
+*   **`momentum-execute`** (Action): Tracks the PR/Issue creation.
+*   **Feedback Scores**: Real-time human approval scoring (1.0 for PRs, 0.0 for rejections) captured via REST API.
 
-### Deep Linking
-The Dashboard provides a **"View Brain Trace"** button for every monitored repository. One click takes you from a "Status: Active" badge directly to the generative logic that produced it.
+### Decision History Feed
+The Dashboard now features a **Momentum Log** that persists every autonomous decision.
+*   **Transparency**: Shows the exact reasoning from the Senior Dev.
+*   **Audit**: One-click jump to the Opik trace for that specific cycle.
+*   **Feedback Link**: Visualizes the Opik feedback score (Pending/Accepted/Rejected).
 
 ## 🛠️ Stack
 

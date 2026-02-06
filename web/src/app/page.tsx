@@ -14,6 +14,7 @@ import {
 import { db } from '@/lib/db';
 import { auth, signOut } from "@/auth";
 import { LogOut, User as UserIcon } from 'lucide-react';
+import RequestPatronage from '@/components/RequestPatronage';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,13 +62,34 @@ async function getUserLink(email: string | null | undefined) {
   return null;
 }
 
+async function getProposals() {
+  try {
+    const snapshot = await db.collection('proposals')
+      .orderBy('timestamp', 'desc')
+      .limit(10)
+      .get();
+    return {
+      data: snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })),
+      error: null
+    };
+  } catch (err: any) {
+    console.error('[Dashboard] Proposal Fetch Error:', err);
+    return { data: [], error: 'Failed to fetch history feed' };
+  }
+}
+
 export default async function Dashboard() {
   const session = await auth();
-  const [reposResult, userLink] = await Promise.all([
+  const [reposResult, userLink, proposalsResult] = await Promise.all([
     getRepos(),
-    getUserLink(session?.user?.email)
+    getUserLink(session?.user?.email),
+    getProposals()
   ]);
   const { data: repos, error } = reposResult;
+  const { data: proposals } = proposalsResult;
 
   const totalUnblocks = repos.reduce((acc, repo: any) => acc + (repo.unblocks || 0), 0);
   const stagnantCount = repos.filter((r: any) => r.status === 'STAGNANT_PLANNING').length;
@@ -87,13 +109,16 @@ export default async function Dashboard() {
               <p className="text-xs text-indigo-300/80">To deploy this autonomous dev for your own repos, see the implementation guide.</p>
             </div>
           </div>
-          <a
-            href="https://github.com/nashy3k/momentum-shadow-dev"
-            target="_blank"
-            className="px-4 py-2 bg-indigo-500 hover:bg-indigo-400 text-white text-xs font-bold rounded-lg transition-all shadow-lg shadow-indigo-500/20"
-          >
-            Get the Source
-          </a>
+          <div className="flex gap-3">
+            <a
+              href="https://github.com/nashy3k/momentum-shadow-dev"
+              target="_blank"
+              className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold rounded-lg transition-all border border-zinc-700"
+            >
+              Get the Source
+            </a>
+            <RequestPatronage />
+          </div>
         </div>
       )}
       {/* Header */}
@@ -114,6 +139,10 @@ export default async function Dashboard() {
           <div className="flex items-center gap-2 px-4 py-2 bg-cyan-500/10 border border-cyan-500/50 rounded-lg text-cyan-400 text-sm">
             <Zap size={16} />
             <span>Agent Live</span>
+          </div>
+
+          <div className="hidden sm:block">
+            <RequestPatronage />
           </div>
 
           {session?.user && (
@@ -280,7 +309,79 @@ export default async function Dashboard() {
         ))}
       </div>
 
-      {/* Footer / CTA */}
+      {/* Decision History Feed */}
+      <div className="mt-16">
+        <div className="flex justify-between items-end mb-6">
+          <h2 className="text-xl font-bold flex items-center gap-2">
+            <Activity className="w-5 h-5 text-indigo-400" />
+            Decision History
+          </h2>
+          <span className="text-zinc-500 text-sm">Last 10 Autonomous Decisions</span>
+        </div>
+
+        <div className="space-y-4">
+          {proposals.length === 0 && (
+            <div className="glass-card p-12 text-center text-zinc-500 italic">
+              No history found. Let the agent patrol to see decisions here!
+            </div>
+          )}
+          {proposals.map((prop: any) => (
+            <div key={prop.id} className="glass-card p-5 border-l-4 border-l-indigo-500/50 hover:bg-zinc-900/40 transition-all">
+              <div className="flex justify-between items-start mb-3">
+                <div className="flex items-center gap-3">
+                  <div className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${prop.status === 'ACCEPTED' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
+                    prop.status === 'REJECTED' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
+                      'bg-orange-500/20 text-orange-400 border border-orange-500/30'
+                    }`}>
+                    {prop.status}
+                  </div>
+                  <h4 className="font-bold text-sm">{prop.repoRef}</h4>
+                  <span className="text-zinc-500 text-[10px]">
+                    {prop.timestamp?.toDate ? prop.timestamp.toDate().toLocaleString() : 'Just now'}
+                  </span>
+                </div>
+                {prop.originTraceId && (
+                  <a
+                    href={`https://www.comet.com/opik/momentum/projects/019bea25-bafb-7307-a1e8-bb3b9e911468/traces?traces_filters=${encodeURIComponent(JSON.stringify([{ field: "tags", operator: "contains", value: `cycle:${prop.originTraceId}` }]))}`}
+                    target="_blank"
+                    className="text-[10px] flex items-center gap-1 text-indigo-400 hover:text-indigo-300 border-b border-indigo-400/30 pb-0.5"
+                  >
+                    <Activity size={10} />
+                    View Trace
+                  </a>
+                )}
+              </div>
+
+              <p className="text-sm text-zinc-300 font-medium mb-2">"{prop.description}"</p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-zinc-800">
+                <div className="bg-zinc-950/50 p-3 rounded-lg border border-zinc-800/50">
+                  <div className="flex items-center gap-2 mb-2">
+                    <ShieldCheck size={14} className="text-cyan-400" />
+                    <span className="text-[11px] font-bold uppercase text-zinc-500">Senior Dev Evaluation</span>
+                    <span className="ml-auto text-[10px] px-1.5 bg-cyan-500/20 text-cyan-400 rounded">
+                      {prop.evaluation?.score}/10
+                    </span>
+                  </div>
+                  <p className="text-xs text-zinc-400 italic">"{prop.evaluation?.reasoning}"</p>
+                </div>
+
+                <div className="flex flex-col justify-center gap-2">
+                  <div className="flex items-center gap-2 text-[10px] text-zinc-500">
+                    <Activity size={12} />
+                    <span>Opik Feedback Score: {prop.status === 'ACCEPTED' ? '1.0' : prop.status === 'REJECTED' ? '0.0' : 'Pending'}</span>
+                  </div>
+                  {prop.issueUrl && (
+                    <a href={prop.issueUrl} target="_blank" className="text-xs text-blue-400 hover:underline flex items-center gap-1">
+                      <ExternalLink size={12} /> View GitHub Issue
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
       <footer className="mt-20 border-t border-white/5 pt-8 flex justify-between items-center text-zinc-500">
         <p className="text-xs uppercase tracking-widest font-medium">Built for the Global Hackathon 2026</p>
         <div className="flex gap-8">
