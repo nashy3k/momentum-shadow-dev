@@ -11,7 +11,7 @@ Momentum is an autonomous AI agent that monitors your GitHub repositories for st
 Momentum uses a **Dual-Brain Architecture** to ensure production-grade proposals.
 
 ### The "Same Model" Paradox
-"If both agents use Gemini 3 Flash, why is it better?"
+"If both agents use Gemini 2.0 Flash, why is it better?"
 
 The answer lies in **Cognitive Load** and **Persona constraints**.
 
@@ -48,7 +48,7 @@ graph TD
     end
 
     subgraph "Senior Dev (Evaluation Phase)"
-        Draft -->|"2. submit for review"| Evaluator[Gemini 3 Flash Evaluator]
+        Draft -->|"2. submit for review"| Evaluator[Gemini 2.0 Flash Evaluator]
         Evaluator -->|"Check Rubric"| Score{"Score >= 7?"}
     end
 
@@ -83,7 +83,7 @@ The Evaluator doesn't just "look" at the code; it executes a strict **Reasoning 
 
 ## 🚀 Key Features
 
-*   **Evolution (Long-Term Learning)**: Momentum now features a "Hippocampus"—a Firestore Vector store that tracks every success and failure. It uses **text-embedding-004** to recall similar past "Lessons Learned" and inject them into future plans.
+*   **Evolution (Long-Term Learning)**: Momentum now features a "Hippocampus"—a Firestore Vector store that tracks every success and failure. It uses **gemini-embedding-001** to recall similar past "Lessons Learned" and inject them into future plans.
 *   **Skill Sync**: Automatically bridges the gap between AI and human standards by syncing your `.agent/skills/*.md` files directly into the reasoning context.
 *   **Reflexion (Short-Term Learning)**: The "Junior Dev" automatically retries and fixes its own mistakes *before* alerting you, triggered by the Senior Dev's feedback.
 *   **Accuracy Pipeline**: Uses a Dual-Brain architecture (Junior Dev vs. Senior Dev Architect) to reduce hallucinations.
@@ -108,7 +108,7 @@ The Dashboard provides a **"View Brain Trace"** button for every monitored repos
 
 ## 🛠️ Stack
 
-*   **Brain**: Google Gemini 3 Flash (Reasoning) & **text-embedding-004** (Memory)
+*   **Brain**: Google Gemini 2.0 Flash (Reasoning) & **gemini-embedding-001** (Memory)
 *   **Body**: Node.js / TypeScript
 *   **Runtime Host**: **Zo Computer** (24/7 dedicated container)
 *   **Persistence**: **Google Firestore** (Real-time NoSQL)
@@ -182,7 +182,7 @@ If you are a judge or a curious visitor, you don't need to deploy anything to se
 flowchart LR
     Zo["Zo Computer (24/7 Bot)"] --> Engine[Core Engine]
     Engine --> Opik[Comet Opik]
-    Engine --> Gemini[Gemini 3 Flash + Embedding]
+    Engine --> Gemini[Gemini 2.0 Flash + Embedding]
     Engine --> GitHub[GitHub API]
     Engine --> DB[(Google Firestore)]
     Dashboard["Firebase Hosting (Next.js)"] --> DB

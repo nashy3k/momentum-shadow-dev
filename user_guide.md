@@ -85,7 +85,7 @@ Momentum uses Firestore for its "Brain" (Long-term memory) and "Dashboard" (Real
 
 #### ☁️ Google Cloud Platform (GCP)?
 **Good News:** You do **NOT** need to configure complex IAM roles, Vertex AI, or Cloud Run to test this project.
-- **For AI**: We use the standard **Gemini 3 Flash API Key** from [Google AI Studio](https://aistudio.google.com/), which is required for reliable tool-calling and the Dual-Brain architecture.
+- **For AI**: We use the standard **Gemini 2.0 Flash API Key** from [Google AI Studio](https://aistudio.google.com/), which is required for reliable tool-calling and the Dual-Brain architecture.
 - **For DB**: The Firebase Project *is* a GCP project, but the Firebase Console handles all the API enabling for you automatically.
 - **Deployment**: If you want to deploy the Dashboard to production, you will need to set up Firebase App Hosting, but for testing, `localhost` works perfectly with the Service Account.
 

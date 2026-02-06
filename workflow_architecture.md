@@ -36,7 +36,7 @@ graph TD
     end
 
     subgraph "Senior Dev (Evaluation Phase)"
-        Draft -->|"2. submit for review"| Evaluator[Gemini 3 Flash Evaluator]
+        Draft -->|"2. submit for review"| Evaluator[Gemini 2.0 Flash Evaluator]
         Evaluator -->|"Check Rubric"| Score{"Score >= 7?"}
     end
 
@@ -99,7 +99,7 @@ This is the **Feedback Loop** in the diagram above.
 
 ### 2. Long-Term Learning (Evolution) ✅ *Implemented*
 *   **The Concept**: Every interaction and feedback is stored in the **Hippocampus** (Firestore Vector Store).
-*   **How it works**: Momentum uses Genkit's `text-embedding-004` to vectorize successes and failures.
+*   **How it works**: Momentum uses Genkit's `gemini-embedding-001` to vectorize successes and failures.
 *   **The Recall**: During the next planning phase, the engine performs a RAG (Retrieval-Augmented Generation) search for relevant "Lessons Learned" and injects them into the Junior Dev's system prompt.
 *   **Expert System Skills**: The engine also bridges the gap with explicit human guidance by automatically syncing `.agent/skills/*.md` files into the reasoning context.
 *   **Human-in-the-loop Learning**: Rejections on Discord are captured as "Negative Memories," ensuring the bot doesn't make the same stylistic mistake twice.
@@ -111,8 +111,8 @@ One of the most powerful architectural decisions in Momentum is the **split-brai
 
 | SDK | Component | Reason for Choice |
 | :--- | :--- | :--- |
-| **Google Generative AI SDK** | **The Planner (CoreEngine)** | **Low-Level Control**: The `generateContent` API provides raw access to token streams. Crucial for the "Senior Dev" persona to prevent hallucinations.<br><br>**Specs**:<br>• File: `src/core/engine.ts`<br>• Model: `gemini-3-flash-preview`<br>• Why: Confirmed Gemini 3.0 reasoning. |
-| **Firebase Genkit** | **The Memory (Hippocampus)** | **Type-Safe Abstraction**: Genkit shines at "Flows" by handling the vectorization pipeline with zero friction.<br><br>**Specs**:<br>• File: `src/core/memory.ts`<br>• Plugin: `googleai/gemini-2.0-flash-exp`<br>• Why: Genkit's `2.0-flash-exp` is the current equivalent wrapper for the bleeding-edge Flash model. |
+| **Google Generative AI SDK** | **The Planner (CoreEngine)** | **Low-Level Control**: The `generateContent` API provides raw access to token streams. Crucial for the "Senior Dev" persona to prevent hallucinations.<br><br>**Specs**:<br>• File: `src/core/engine.ts`<br>• Model: `gemini-2.0-flash`<br>• Why: Verified Gemini 2.0 stability. |
+| **Firebase Genkit** | **The Memory (Hippocampus)** | **Type-Safe Abstraction**: Genkit shines at "Flows" by handling the vectorization pipeline with zero friction.<br><br>**Specs**:<br>• File: `src/core/memory.ts`<br>• Plugin: `googleai/gemini-2.0-flash`<br>• Why: Genkit's stable wrapper for the latest Flash model. |
 
 **Why this matters for your demo:**
 > "We didn't just use a framework. We architected a hybrid. We use raw metal (SDK) for the thinking, and modern plumbing (Genkit) for the memory. This gives us the speed of a script with the structure of an enterprise app."
@@ -127,7 +127,7 @@ Momentum chose **Firebase Genkit** as its backbone for robust, production-grade 
 
 ### 2. Native Google Integration (vs LangChain)
 *   **The Problem with LangChain**: It's a "Generic Wrapper". It adds varied latency and abstraction layers to support every model under the sun.
-*   **The Genkit Win**: Genkit is built *by* the Firebase/Google team. It has first-party support for `gemini-2.0-flash-exp` and `text-embedding-004`. There is no "translation layer"—it is pure, optimized utilization of the Google Cloud infrastructure.
+*   **The Genkit Win**: Genkit is built *by* the Firebase/Google team. It has first-party support for `gemini-2.0-flash` and `gemini-embedding-001`. There is no "translation layer"—it is pure, optimized utilization of the Google Cloud infrastructure.
 
 ### 3. Observability Out-of-the-Box
 *   **The Feature**: Genkit's Developer UI allows us to inspect the "Memory" flow in real-time. We can see exactly what the embedding vector looks like and which "Lesson Learned" was retrieved, without adding a single line of `console.log`.
