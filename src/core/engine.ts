@@ -325,7 +325,7 @@ export class CoreEngine {
             const googleKey = process.env.GOOGLE_API_KEY || '';
             const genAI = new GoogleGenerativeAI(googleKey);
             const dynamicModel = genAI.getGenerativeModel({
-                model: 'gemini-3-flash-preview',
+                model: 'gemini-1.5-flash',
                 systemInstruction: 'You are Momentum, a Shadow Developer agent. Your purpose is to unblock stagnant repositories with high-quality, actionable code changes. \n' +
                     '1. ALWAYS start by listing the files in the repository if you don\'t have a clear idea of the structure.\n' +
                     '2. ALWAYS read the content of relevant files (package.json, README, or source files) before proposing a change.\n' +
@@ -356,6 +356,7 @@ export class CoreEngine {
                         result = await chat.sendMessage(currentMessage);
                         break;
                     } catch (apiErr: any) {
+                        console.error('[Core DEBUG] ⚠️ API Call Failed. Raw Error:', apiErr); // Force visibility
                         const errMsg = apiErr.message || '';
 
                         // Scenario 1: Model Not Found (404) -> IMMEDIATE DOWNGRADE
