@@ -308,17 +308,20 @@ export class CoreEngine {
 
             // FETCH MEMORIES & SKILLS (The Recall)
             console.log('[Core] Recalling past experiences and documentation...');
-            const pastMemories = await this.memory.search(repoRef, 3);
-            const skills = await this.loadSkills();
+            try {
+                const pastMemories = await this.memory.search(repoRef, 3);
+                const skills = await this.loadSkills();
 
-            console.log(`[Core] "The Recall" complete: Recalled ${pastMemories.length} memories and active expert skills.`);
+                console.log(`[Core] "The Recall" complete: Recalled ${pastMemories.length} memories and active expert skills.`);
 
-            let memoryContext = '';
-            if (pastMemories.length > 0) {
-                memoryContext = '\n--- LESSONS LEARNED (Past Experiences) ---\n';
-                pastMemories.forEach((m, i) => {
-                    memoryContext += `[Lesson ${i + 1}] ${m.type.toUpperCase()}: ${m.text}\n`;
-                });
+                if (pastMemories.length > 0) {
+                    memoryContext = '\n--- LESSONS LEARNED (Past Experiences) ---\n';
+                    pastMemories.forEach((m, i) => {
+                        memoryContext += `[Lesson ${i + 1}] ${m.type.toUpperCase()}: ${m.text}\n`;
+                    });
+                }
+            } catch (memErr) {
+                console.warn('[Core] ⚠️ Memory Recall encountered an issue (Bot will continue without memory):', memErr);
             }
 
             // DYNAMIC BRAIN: Re-initialize model with enriched context

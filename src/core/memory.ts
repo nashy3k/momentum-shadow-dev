@@ -33,14 +33,19 @@ export class MemoryManager {
      * Converts text into a vector embedding using text-embedding-004
      */
     async embed(text: string): Promise<number[]> {
-        const result = await ai.embed({
-            embedder: textEmbedding004,
-            content: text,
-        });
-        if (!result || result.length === 0) throw new Error('Embedding failed: No result from LLM');
-        const first = result[0];
-        if (!first) throw new Error('Embedding failed: Result part is null');
-        return first.embedding as number[];
+        try {
+            const result = await ai.embed({
+                embedder: textEmbedding004,
+                content: text,
+            });
+            if (!result || result.length === 0) throw new Error('Embedding failed: No result from LLM');
+            const first = result[0];
+            if (!first) throw new Error('Embedding failed: Result part is null');
+            return first.embedding as number[];
+        } catch (err: any) {
+            console.error('[Memory] ⚠️ Embedding API Failed:', err.message);
+            return []; // Return empty vector on failure (graceful degradation)
+        }
     }
 
     /**
@@ -70,6 +75,10 @@ export class MemoryManager {
      */
     async search(query: string, limit: number = 3): Promise<Memory[]> {
         const queryEmbedding = await this.embed(query);
+        if (!queryEmbedding || queryEmbedding.length === 0) {
+            console.warn('[Memory] Skipping search due to embedding failure.');
+            return [];
+        }
 
         // Hackathon logic: Fetch last 50 memories and do in-memory cosine similarity
         // Proper way would be Firestore Vector Search (launched recently)
