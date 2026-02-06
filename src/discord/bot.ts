@@ -12,6 +12,16 @@ console.log = (...args) => originalLog(getTimestamp(), ...args);
 console.error = (...args) => originalError(getTimestamp(), ...args);
 console.warn = (...args) => originalWarn(getTimestamp(), ...args);
 
+// GLOBAL SAFETY: Catch unhandled errors to prevent silent crashes
+process.on('uncaughtException', (err) => {
+    console.error('[(CRITICAL) Uncaught Exception] The bot crashed:', err);
+    // Ideally, log this to a file or external service if possible
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('[(CRITICAL) Unhandled Rejection] at:', promise, 'reason:', reason);
+});
+
 import {
     Client,
     GatewayIntentBits,
@@ -55,10 +65,11 @@ const pendingProposals = new Map<string, MomentumProposal>();
 // For Hackathon, we'll keep it simple and just run the check for the main repo every day at 00:00 UTC (8 AM KL).
 // Real implementation would read from DB for per-user schedules.
 
-console.log('[Scheduler] Initializing Nightly Patrol...');
-cron.schedule('0 0 * * *', async () => {
-    // Run at 00:00 UTC -> 8:00 AM KL Time (Zo Server Time is UTC)
-    console.log('[Scheduler] 🕗 It is Midnight UTC (8 AM KL). Starting Daily Patrol...');
+// Schedule: TEST MODE -> 2 PM KL (6 AM UTC)
+console.log('[Scheduler] Initializing Test Patrol (Scheduled for 2 PM KL)...');
+cron.schedule('0 6 * * *', async () => {
+    // Run at 06:00 UTC -> 14:00 (2 PM) KL Time
+    console.log('[Scheduler] 🕗 It is 2 PM KL. Starting Scheduled Test Patrol...');
     await runPatrol();
 });
 

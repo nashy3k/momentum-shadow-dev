@@ -186,10 +186,26 @@ export class CoreEngine {
     }
 
     async plan(repoPath: string, metadata?: any, options?: { maintenanceOnly?: boolean }): Promise<MomentumResult> {
-        const trace = this.opik.trace({ name: options?.maintenanceOnly ? 'momentum-maintenance' : 'momentum-plan', input: { repoPath } });
-        const cycleId = trace.data.id;
-        trace.update({ tags: [`repo:${repoPath}`, `cycle:${cycleId}`] });
+        let trace: any;
+        let cycleId = '';
+
         try {
+            // Initialize Opik safely
+            try {
+                trace = this.opik.trace({ name: options?.maintenanceOnly ? 'momentum-maintenance' : 'momentum-plan', input: { repoPath } });
+                cycleId = trace.data.id;
+                trace.update({ tags: [`repo:${repoPath}`, `cycle:${cycleId}`] });
+            } catch (opikErr) {
+                console.warn('[Core] Opik Trace Init Failed (Continuing without observability):', opikErr);
+                // Fallback mock trace to prevent crash
+                trace = {
+                    span: () => ({ update: () => { }, end: () => { } }),
+                    update: () => { },
+                    end: () => { },
+                    data: { id: 'no-trace' }
+                };
+            }
+
             const checkSpan = trace.span({ name: 'pulse-check' });
             const isRemote = repoPath.includes('github.com') || (!repoPath.startsWith('/') && !repoPath.startsWith('.') && repoPath.includes('/') && !repoPath.startsWith('C:'));
             let lastCommitTime = 0;
