@@ -216,6 +216,7 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
                 console.log(`[Bot] Acknowledging command '${sub}'...`);
                 // Use flags instead of boolean to fix deprecation warning
                 await cmdInteraction.deferReply({ flags: 64 }); // 64 = Ephemeral
+                console.log(`[Bot] Acknowledgement SUCCESS for '${sub}'.`); // CHECKPOINT 1
             } catch (err: any) {
                 console.warn(`[Bot] Failed to acknowledge interaction: ${err.message}`);
                 // If we can't acknowledge, we can't reply. Abort.
@@ -225,7 +226,40 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
 
         if (cmdInteraction.commandName === 'momentum') {
             const subcommand = cmdInteraction.options.getSubcommand();
+            console.log(`[Bot] Routing subcommand: '${subcommand}'`); // CHECKPOINT 2
+
             if (subcommand === 'check') {
+                const repoInput = cmdInteraction.options.getString('repo')!.trim();
+                // ... (check logic) ...
+                if (repoInput.toLowerCase().includes('check!') || repoInput.toLowerCase() === 'check') {
+                    return cmdInteraction.reply({
+                        content: '❌ **Tip**: You don\'t need to type "check!". Just paste your repository URL in the "repo" box.\n\n**Example**: `/momentum check repo:https://github.com/nashy3k/vector-skylab`',
+                        ephemeral: true
+                    });
+                }
+                const repo = repoInput;
+                await cmdInteraction.deferReply();
+
+                try {
+                    const result = await engine.plan(repo, { discordChannelId: cmdInteraction.channelId });
+                    // ... (rest of check logic) ...
+                    if (result.status === 'ACTIVE') {
+                        return cmdInteraction.editReply(`✅ **${result.repoRef}** is healthy! (Last active ${result.daysSince?.toFixed(1)} days ago).`);
+                    }
+                    if (result.status === 'FAILED') {
+                        return cmdInteraction.editReply(`❌ **System Error**: ${result.error || 'Unknown Error'}`);
+                    }
+                    // ...
+                } catch (err: any) {
+                    await cmdInteraction.editReply(`💥 **Fatal crash**: ${err.message || 'An unknown error occurred.'}`);
+                }
+            } else if (subcommand === 'patrol') {
+                console.log('[Bot] Entering PATROL block...'); // CHECKPOINT 3
+                await cmdInteraction.editReply('🚀 **Manual Patrol Triggered.** Checking all tracked repositories for stagnation...');
+                console.log('[Bot] Triggering runPatrol()...'); // CHECKPOINT 4
+                await runPatrol();
+                console.log('[Bot] runPatrol() returned.'); // CHECKPOINT 5
+            } else if (subcommand === 'untrack') {
                 const repoInput = cmdInteraction.options.getString('repo')!.trim();
 
                 // Hard check for common "command as argument" mistakes
