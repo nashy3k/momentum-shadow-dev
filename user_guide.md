@@ -8,7 +8,7 @@ For the Hackathon v1.0, Momentum operates as a **Single-Tenant Backend** with a 
 
 | Component | Status | Who has access? |
 | :--- | :--- | :--- |
-| **The Brain (Zo Bot)** | **Private** | Only the Owner (`nashy3k`). The bot runs on a secure container using the Owner's GitHub/Google API keys. |
+| **The Brain (Zo Bot)** | **Private** | Only the Owner (`nashy3k`). The bot runs on a secure container using the Owner's Gemini 3 Flash API key. |
 | **The Dashboard** | **Public (Auth Gate)** | Any user with a Google Account can log in. |
 | **The Data** | **Shared** | Currently, **all logged-in users** see the same fleet of repositories (the Owner's repos). |
 
@@ -85,7 +85,7 @@ Momentum uses Firestore for its "Brain" (Long-term memory) and "Dashboard" (Real
 
 #### ☁️ Google Cloud Platform (GCP)?
 **Good News:** You do **NOT** need to configure complex IAM roles, Vertex AI, or Cloud Run to test this project.
-- **For AI**: We use the standard **Gemini 2.0 Flash API Key** from [Google AI Studio](https://aistudio.google.com/), which is required for reliable tool-calling and the Dual-Brain architecture.
+- **For AI**: We use the standard **Gemini 3 Flash API Key** from [Google AI Studio](https://aistudio.google.com/), which is required for reliable tool-calling and the Dual-Brain architecture.
 - **For DB**: The Firebase Project *is* a GCP project, but the Firebase Console handles all the API enabling for you automatically.
 - **Deployment**: If you want to deploy the Dashboard to production, you will need to set up Firebase App Hosting, but for testing, `localhost` works perfectly with the Service Account.
 

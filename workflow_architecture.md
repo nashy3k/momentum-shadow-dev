@@ -9,6 +9,7 @@ The answer lies in **Cognitive Load** and **Persona constraints**.
 | **Context Window** | Full of file contents, tool outputs, and noise. | Clean. Only sees the *Proposal* and the *Rubric*. |
 | **Goal** | **Recall & Synthesis** (Generate a solution). | **Classification & verification** (Grade a solution). |
 | **Temperature** | High (0.7) - Needs creativity. | Low (0.1) - Needs determinism. |
+| **Model** | **Gemini 3 Flash** | **Gemini 3 Flash** |
 
 ## The Workflow Diagram
 
@@ -36,7 +37,7 @@ graph TD
     end
 
     subgraph "Senior Dev (Evaluation Phase)"
-        Draft -->|"2. submit for review"| Evaluator[Gemini 2.0 Flash Evaluator]
+        Draft -->|"2. submit for review"| Evaluator[Gemini 3 Flash Evaluator]
         Evaluator -->|"Check Rubric"| Score{"Score >= 7?"}
     end
 
@@ -111,8 +112,8 @@ One of the most powerful architectural decisions in Momentum is the **split-brai
 
 | SDK | Component | Reason for Choice |
 | :--- | :--- | :--- |
-| **Google Generative AI SDK** | **The Planner (CoreEngine)** | **Low-Level Control**: The `generateContent` API provides raw access to token streams. Crucial for the "Senior Dev" persona to prevent hallucinations.<br><br>**Specs**:<br>• File: `src/core/engine.ts`<br>• Model: `gemini-2.0-flash`<br>• Why: Verified Gemini 2.0 stability. |
-| **Firebase Genkit** | **The Memory (Hippocampus)** | **Type-Safe Abstraction**: Genkit shines at "Flows" by handling the vectorization pipeline with zero friction.<br><br>**Specs**:<br>• File: `src/core/memory.ts`<br>• Plugin: `googleai/gemini-2.0-flash`<br>• Why: Genkit's stable wrapper for the latest Flash model. |
+| **Google Generative AI SDK** | **The Planner (CoreEngine)** | **Low-Level Control**: The `generateContent` API provides raw access to token streams. Crucial for the "Senior Dev" persona to prevent hallucinations.<br><br>**Specs**:<br>• File: `src/core/engine.ts`<br>• Model: `gemini-3-flash-preview`<br>• Why: Pro-grade reasoning & 2.0-killing speed. |
+| **Firebase Genkit** | **The Memory (Hippocampus)** | **Type-Safe Abstraction**: Genkit shines at "Flows" by handling the vectorization pipeline with zero friction.<br><br>**Specs**:<br>• File: `src/core/memory.ts`<br>• Plugin: `googleai/gemini-3-flash-preview`<br>• Why: Genkit's wrapper for the latest flagship Flash model. |
 
 **Why this matters for your demo:**
 > "We didn't just use a framework. We architected a hybrid. We use raw metal (SDK) for the thinking, and modern plumbing (Genkit) for the memory. This gives us the speed of a script with the structure of an enterprise app."
@@ -127,7 +128,7 @@ Momentum chose **Firebase Genkit** as its backbone for robust, production-grade 
 
 ### 2. Native Google Integration (vs LangChain)
 *   **The Problem with LangChain**: It's a "Generic Wrapper". It adds varied latency and abstraction layers to support every model under the sun.
-*   **The Genkit Win**: Genkit is built *by* the Firebase/Google team. It has first-party support for `gemini-2.0-flash` and `gemini-embedding-001`. There is no "translation layer"—it is pure, optimized utilization of the Google Cloud infrastructure.
+*   **The Genkit Win**: Genkit is built *by* the Firebase/Google team. It has first-party support for `gemini-3-flash-preview` and `gemini-embedding-001`. There is no "translation layer"—it is pure, optimized utilization of the Google Cloud infrastructure.
 
 ### 3. Observability Out-of-the-Box
 *   **The Feature**: Genkit's Developer UI allows us to inspect the "Memory" flow in real-time. We can see exactly what the embedding vector looks like and which "Lesson Learned" was retrieved, without adding a single line of `console.log`.

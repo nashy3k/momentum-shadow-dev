@@ -7,7 +7,7 @@ dotenv.config({ override: true });
 
 const ai = genkit({
     plugins: [googleAI()],
-    model: 'googleai/gemini-2.0-flash', // Gemini 3 Flash equivalent
+    model: 'googleai/gemini-3-flash-preview', // Gemini 3 Flash flagship
 });
 
 export interface Memory {
