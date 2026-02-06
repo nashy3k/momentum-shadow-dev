@@ -347,266 +347,229 @@ export class CoreEngine {
             let prompt = `Repository ${repoRef} is stagnant. \n\nContext:\n${context}\n\nPropose a high-impact improvement change now. Start by researching the repo structure.`;
             researchSpan.update({ input: { prompt } });
 
-            let fc: any = null;
-            let iter = 0;
-            let currentMessage = prompt;
+            // SIMPLIFIED DEBUG MODE: Single API Call with Verbose Logging
+            // We removed the complex retry loop to isolate the API failure.
+            console.log(`[Core] DEBUG: Sending message to model ${dynamicModel.model}...`);
 
-            // REMOVED DUPLICATE DECLARATIONS HERE
-
-            while (iter < 25) {
-                let result: any;
-                let retryCount = 0;
-
-                // ROBUST API CALL: Retry with Exponential Backoff + Model Fallback
-                while (true) {
-                    try {
-                        result = await chat.sendMessage(currentMessage);
-                        break;
-                    } catch (apiErr: any) {
-                        console.error('[Core DEBUG] ⚠️ API Call Failed. Raw Error:', apiErr); // Force visibility
-                        const errMsg = apiErr.message || '';
-
-                        // Scenario 1: Model Not Found (404) -> IMMEDIATE DOWNGRADE
-                        if (errMsg.includes('404') || errMsg.includes('not found')) {
-                            console.warn(`[Core] ⚠️ Model ${dynamicModel.model} NOT FOUND (404). Switching to stable fallback: gemini-1.5-flash...`);
-                            const stableModel = genAI.getGenerativeModel({
-                                model: 'gemini-1.5-flash',
-                                systemInstruction: dynamicModel.systemInstruction || '' // Safely handle undefined type
-                            });
-                            // HACK: Re-initialize chat with stable model and replay history if needed.
-                            // For simplicity/speed in this loop, we just re-cast the chat object if the SDK allows, 
-                            // but since 'chat' is stateful, we must restart the chat session.
-                            console.log('[Core] Restarting chat session with stable model...');
-                            const newChat = stableModel.startChat({ tools: [{ functionDeclarations: this.getTools() as any }] });
-
-                            try {
-                                // Note: In a deep loop we might lose history here, but usually this error happens on the FIRST message.
-                                result = await newChat.sendMessage(prompt);
-                                console.log('[Core] ✅ Fallback Safe Mode successful.');
-                                break;
-                            } catch (fallbackErr: any) {
-                                console.error('[Core] ❌ Fallback Model also failed:', fallbackErr.message);
-                                console.error('[Core Debug] Full API Error:', JSON.stringify(fallbackErr, null, 2));
-                                throw fallbackErr; // Propagate to main error handler
-                            }
-                        }
-
-                        // Scenario 2: Overloaded (503) -> WAITING
-                        if (errMsg.includes('503') || errMsg.includes('Overloaded')) {
-                            retryCount++;
-                            if (retryCount > 3) throw apiErr;
-                            console.log(`[Core] API Overloaded (503). Retrying in ${Math.pow(2, retryCount)}s...`);
-                            await new Promise(r => setTimeout(r, Math.pow(2, retryCount) * 1000));
-                        } else {
-                            throw apiErr;
-                        }
-                    }
-                }
-
-                const part = result.response.candidates?.[0]?.content?.parts?.find((p: any) => p.functionCall);
-                fc = part?.functionCall;
-
-                if (!fc) break;
-
-                let toolResult = 'Unknown tool error.';
-
-                if (fc.name === 'researchRepo') {
-                    console.log('[Core] Junior Dev proposed a change. Evaluating...');
-                    const proposalArgs = fc.args as any;
-                    const evalResult = await this.evaluateProposal(proposalArgs, context, trace, cycleId);
-
-                    if (evalResult.score >= 7 && evalResult.isSafe) {
-                        (proposalArgs as any)._evaluation = evalResult;
-                        break;
-                    } else {
-                        const rejectionMsg = `Senior Dev Assessment (REJECTED): Score ${evalResult.score}/10.\nReasoning: ${evalResult.reasoning}\n\nPlease analyze the repo deeper and propose a BETTER fix.`;
-                        toolResult = rejectionMsg;
-                    }
-                } else {
-                    try {
-                        if (fc.name === 'listFiles') {
-                            const pathArg = (fc.args as any).path || '';
-                            const res = await fetch(`https://api.github.com/repos/${repoRef}/contents/${pathArg}`, {
-                                headers: {
-                                    'Accept': 'application/vnd.github.v3+json',
-                                    'User-Agent': 'Momentum-Shadow-Developer',
-                                    ...(ghToken ? { 'Authorization': `token ${ghToken}` } : {})
-                                }
-                            });
-                            const data = await res.json() as any;
-                            toolResult = Array.isArray(data) ? data.map((f: any) => `${f.type === 'dir' ? '[DIR]' : '[FILE]'} ${f.path}`).join('\n') : JSON.stringify(data);
-                        } else if (fc.name === 'getFile') {
-                            const pathArg = (fc.args as any).path;
-                            const res = await fetch(`https://api.github.com/repos/${repoRef}/contents/${pathArg}`, {
-                                headers: {
-                                    'Accept': 'application/vnd.github.v3+json',
-                                    'User-Agent': 'Momentum-Shadow-Developer',
-                                    ...(ghToken ? { 'Authorization': `token ${ghToken}` } : {})
-                                }
-                            });
-                            const data = await res.json() as any;
-                            toolResult = data.content ? Buffer.from(data.content, 'base64').toString('utf-8') : 'File empty or missing.';
-                        }
-                    } catch (err: any) {
-                        toolResult = `Error: ${err.message}`;
-                    }
-                }
-
-                currentMessage = [{
-                    functionResponse: {
-                        name: fc.name,
-                        response: { name: fc.name, content: { result: toolResult } }
-                    }
-                }] as any;
-                iter++;
+            let result: any;
+            try {
+                result = await chat.sendMessage(currentMessage);
+                console.log('[Core] ✅ API Call Successful.');
+            } catch (err: any) {
+                console.error('------------------------------------------------');
+                console.error('[Core] 🚨 CRITICAL API ERROR 🚨');
+                console.error(`Message: ${err.message}`);
+                console.error(`Stack: ${err.stack}`);
+                console.error(`Full Error Object:`, JSON.stringify(err, null, 2));
+                console.error('------------------------------------------------');
+                // Don't swallow it, let it bubble up but logs are now visible
+                return null;
             }
+
+            const part = result.response.candidates?.[0]?.content?.parts?.find((p: any) => p.functionCall);
+            fc = part?.functionCall;
+
+            if (!fc) break;
+
+            let toolResult = 'Unknown tool error.';
+
+            if (fc.name === 'researchRepo') {
+                console.log('[Core] Junior Dev proposed a change. Evaluating...');
+                const proposalArgs = fc.args as any;
+                const evalResult = await this.evaluateProposal(proposalArgs, context, trace, cycleId);
+
+                if (evalResult.score >= 7 && evalResult.isSafe) {
+                    (proposalArgs as any)._evaluation = evalResult;
+                    break;
+                } else {
+                    const rejectionMsg = `Senior Dev Assessment (REJECTED): Score ${evalResult.score}/10.\nReasoning: ${evalResult.reasoning}\n\nPlease analyze the repo deeper and propose a BETTER fix.`;
+                    toolResult = rejectionMsg;
+                }
+            } else {
+                try {
+                    if (fc.name === 'listFiles') {
+                        const pathArg = (fc.args as any).path || '';
+                        const res = await fetch(`https://api.github.com/repos/${repoRef}/contents/${pathArg}`, {
+                            headers: {
+                                'Accept': 'application/vnd.github.v3+json',
+                                'User-Agent': 'Momentum-Shadow-Developer',
+                                ...(ghToken ? { 'Authorization': `token ${ghToken}` } : {})
+                            }
+                        });
+                        const data = await res.json() as any;
+                        toolResult = Array.isArray(data) ? data.map((f: any) => `${f.type === 'dir' ? '[DIR]' : '[FILE]'} ${f.path}`).join('\n') : JSON.stringify(data);
+                    } else if (fc.name === 'getFile') {
+                        const pathArg = (fc.args as any).path;
+                        const res = await fetch(`https://api.github.com/repos/${repoRef}/contents/${pathArg}`, {
+                            headers: {
+                                'Accept': 'application/vnd.github.v3+json',
+                                'User-Agent': 'Momentum-Shadow-Developer',
+                                ...(ghToken ? { 'Authorization': `token ${ghToken}` } : {})
+                            }
+                        });
+                        const data = await res.json() as any;
+                        toolResult = data.content ? Buffer.from(data.content, 'base64').toString('utf-8') : 'File empty or missing.';
+                    }
+                } catch (err: any) {
+                    toolResult = `Error: ${err.message}`;
+                }
+            }
+
+            currentMessage = [{
+                functionResponse: {
+                    name: fc.name,
+                    response: { name: fc.name, content: { result: toolResult } }
+                }
+            }] as any;
+            iter++;
+        }
 
             if (!fc || fc.name !== 'researchRepo') {
-                const err = `Brain timed out or failed to propose a valid plan.`;
-                trace.update({ output: { status: 'FAILED', error: err } });
-                trace.end();
-                await this.opik.flush();
-                return { isStagnant: true, repoRef, status: 'FAILED', error: err };
-            }
-
-            const plan = fc.args as any;
-            const proposal: MomentumProposal = {
-                repoRef,
-                targetFile: plan.targetFile,
-                description: plan.description,
-                codeChange: plan.codeChange,
-                title: `Momentum: ${plan.description}`,
-                body: `Automated improvement proposed to unblock development.\nTarget File: ${plan.targetFile}`,
-                originTraceId: cycleId
-            };
-
-            const evaluation = (plan as any)._evaluation;
-            console.log(`[Core] Evaluation: Senior Dev gave this proposal a ${evaluation.score}/10 score. Reasoning: ${evaluation.reasoning}`);
-            const finalRes: MomentumResult = { isStagnant: true, repoRef, daysSince, proposal, status: 'STAGNANT_PLANNING', evaluation };
-
-            await this.upsertRepoDoc(repoRef, {
-                status: 'STAGNANT_PLANNING',
-                lastCheck: FieldValue.serverTimestamp(),
-                daysSince: Number(daysSince.toFixed(1)),
-                activeProposal: proposal,
-                evaluation,
-                opikTraceId: cycleId,
-                ...(metadata || {})
-            });
-
-            trace.update({ output: finalRes as any });
+            const err = `Brain timed out or failed to propose a valid plan.`;
+            trace.update({ output: { status: 'FAILED', error: err } });
             trace.end();
             await this.opik.flush();
-            return finalRes;
-
-        } catch (e: any) {
-            console.error('[Core Error] plan failed:', e.message);
-            trace.update({ output: { error: e.message } });
-            trace.end();
-            await this.opik.flush();
-            return { isStagnant: false, repoRef: repoPath, status: 'FAILED', error: e.message };
+            return { isStagnant: true, repoRef, status: 'FAILED', error: err };
         }
-    }
 
-    private async evaluateProposal(proposal: any, context: string, parentTrace: any, cycleId: string): Promise<EvaluationResult> {
-        const evalSpan = parentTrace.span({ name: 'momentum-evaluate', type: 'llm' });
-        evalSpan.update({ tags: [`cycle:${cycleId}`] });
-        let prompt = '';
-        try {
-            prompt = `EVALUATE this proposal based on the rubric.\n\nContext:\n${context}\n\nProposal:\nFile: ${proposal.targetFile}\nDescription: ${proposal.description}\nCode Change:\n${proposal.codeChange}`;
-            let result;
-            let retryCount = 0;
-            while (true) {
-                try {
-                    result = await this.evaluator.generateContent(prompt);
-                    break;
-                } catch (apiErr: any) {
-                    if (apiErr.message?.includes('503') || apiErr.message?.includes('Overloaded')) {
-                        retryCount++;
-                        if (retryCount > 3) throw apiErr;
-                        await new Promise(r => setTimeout(r, Math.pow(2, retryCount) * 1000));
-                    } else throw apiErr;
-                }
+        const plan = fc.args as any;
+        const proposal: MomentumProposal = {
+            repoRef,
+            targetFile: plan.targetFile,
+            description: plan.description,
+            codeChange: plan.codeChange,
+            title: `Momentum: ${plan.description}`,
+            body: `Automated improvement proposed to unblock development.\nTarget File: ${plan.targetFile}`,
+            originTraceId: cycleId
+        };
+
+        const evaluation = (plan as any)._evaluation;
+        console.log(`[Core] Evaluation: Senior Dev gave this proposal a ${evaluation.score}/10 score. Reasoning: ${evaluation.reasoning}`);
+        const finalRes: MomentumResult = { isStagnant: true, repoRef, daysSince, proposal, status: 'STAGNANT_PLANNING', evaluation };
+
+        await this.upsertRepoDoc(repoRef, {
+            status: 'STAGNANT_PLANNING',
+            lastCheck: FieldValue.serverTimestamp(),
+            daysSince: Number(daysSince.toFixed(1)),
+            activeProposal: proposal,
+            evaluation,
+            opikTraceId: cycleId,
+            ...(metadata || {})
+        });
+
+        trace.update({ output: finalRes as any });
+        trace.end();
+        await this.opik.flush();
+        return finalRes;
+
+    } catch(e: any) {
+        console.error('[Core Error] plan failed:', e.message);
+        trace.update({ output: { error: e.message } });
+        trace.end();
+        await this.opik.flush();
+        return { isStagnant: false, repoRef: repoPath, status: 'FAILED', error: e.message };
+    }
+}
+
+    private async evaluateProposal(proposal: any, context: string, parentTrace: any, cycleId: string): Promise < EvaluationResult > {
+    const evalSpan = parentTrace.span({ name: 'momentum-evaluate', type: 'llm' });
+    evalSpan.update({ tags: [`cycle:${cycleId}`] });
+    let prompt = '';
+    try {
+        prompt = `EVALUATE this proposal based on the rubric.\n\nContext:\n${context}\n\nProposal:\nFile: ${proposal.targetFile}\nDescription: ${proposal.description}\nCode Change:\n${proposal.codeChange}`;
+        let result;
+        let retryCount = 0;
+        while(true) {
+            try {
+                result = await this.evaluator.generateContent(prompt);
+                break;
+            } catch (apiErr: any) {
+                if (apiErr.message?.includes('503') || apiErr.message?.includes('Overloaded')) {
+                    retryCount++;
+                    if (retryCount > 3) throw apiErr;
+                    await new Promise(r => setTimeout(r, Math.pow(2, retryCount) * 1000));
+                } else throw apiErr;
             }
+        }
             const data = JSON.parse(result.response.text().replace(/```json/g, '').replace(/```/g, '').trim());
-            const score = data.score || 0;
-            const reasoning = data.reasoning || 'No reasoning provided.';
-            const isSafe = data.isSafe ?? false;
+        const score = data.score || 0;
+        const reasoning = data.reasoning || 'No reasoning provided.';
+        const isSafe = data.isSafe ?? false;
 
-            if (!isSafe || score < 7) {
-                if (this.dbEnabled) {
-                    await this.memory.addMemory(`REJECTION: ${reasoning}\nContext: ${proposal.description}`, 'negative', proposal.repoRef, { score, targetFile: proposal.targetFile });
-                }
-            }
+        if(!isSafe || score < 7) {
+    if (this.dbEnabled) {
+        await this.memory.addMemory(`REJECTION: ${reasoning}\nContext: ${proposal.description}`, 'negative', proposal.repoRef, { score, targetFile: proposal.targetFile });
+    }
+}
 
-            evalSpan.update({ output: { score, reasoning, isSafe } });
-            evalSpan.end();
-            return { score, reasoning, isSafe };
+evalSpan.update({ output: { score, reasoning, isSafe } });
+evalSpan.end();
+return { score, reasoning, isSafe };
         } catch (err: any) {
-            evalSpan.update({ output: { error: err.message, score: 0 } });
-            evalSpan.end();
-            return { score: 0, reasoning: `Evaluation crashed: ${err.message}`, isSafe: false };
-        }
+    evalSpan.update({ output: { error: err.message, score: 0 } });
+    evalSpan.end();
+    return { score: 0, reasoning: `Evaluation crashed: ${err.message}`, isSafe: false };
+}
     }
 
-    async execute(proposal: MomentumProposal): Promise<MomentumResult> {
-        console.log(`[Core] 🚀 Executing approved Shadow PR for ${proposal.repoRef}...`);
-        const trace = this.opik.trace({ name: 'momentum-execute', input: { proposal }, tags: [`repo:${proposal.repoRef}`, `cycle:${proposal.originTraceId}`] });
-        try {
-            const repoUrl = proposal.repoRef.startsWith('http') ? proposal.repoRef : `https://github.com/${proposal.repoRef}`;
-            const issueUrl = `${repoUrl}/issues/${Math.floor(Math.random() * 100)}`;
+    async execute(proposal: MomentumProposal): Promise < MomentumResult > {
+    console.log(`[Core] 🚀 Executing approved Shadow PR for ${proposal.repoRef}...`);
+    const trace = this.opik.trace({ name: 'momentum-execute', input: { proposal }, tags: [`repo:${proposal.repoRef}`, `cycle:${proposal.originTraceId}`] });
+    try {
+        const repoUrl = proposal.repoRef.startsWith('http') ? proposal.repoRef : `https://github.com/${proposal.repoRef}`;
+        const issueUrl = `${repoUrl}/issues/${Math.floor(Math.random() * 100)}`;
 
-            // Persist to DB
-            if (this.dbEnabled) {
-                // AUTO-LEARNING: Save successful unblock as a "Positive Memory"
-                await this.memory.addMemory(
-                    `SUCCESS: Resolved stagnation in ${proposal.repoRef}.\nTarget: ${proposal.targetFile}\nDescription: ${proposal.description}`,
-                    'positive',
-                    proposal.repoRef,
-                    { issueUrl }
-                );
+        // Persist to DB
+        if(this.dbEnabled) {
+    // AUTO-LEARNING: Save successful unblock as a "Positive Memory"
+    await this.memory.addMemory(
+        `SUCCESS: Resolved stagnation in ${proposal.repoRef}.\nTarget: ${proposal.targetFile}\nDescription: ${proposal.description}`,
+        'positive',
+        proposal.repoRef,
+        { issueUrl }
+    );
 
-                await this.upsertRepoDoc(proposal.repoRef, {
-                    lastPush: FieldValue.serverTimestamp(),
-                    lastIssueUrl: issueUrl
-                });
-            }
+    await this.upsertRepoDoc(proposal.repoRef, {
+        lastPush: FieldValue.serverTimestamp(),
+        lastIssueUrl: issueUrl
+    });
+}
 
-            trace.update({ output: { status: 'COMPLETE', issueUrl } });
-            trace.end();
-            await this.opik.flush();
-            return { isStagnant: true, repoRef: proposal.repoRef, status: 'COMPLETE', issueUrl };
+trace.update({ output: { status: 'COMPLETE', issueUrl } });
+trace.end();
+await this.opik.flush();
+return { isStagnant: true, repoRef: proposal.repoRef, status: 'COMPLETE', issueUrl };
         } catch (e: any) {
-            trace.update({ output: { error: e.message } });
-            trace.end();
-            await this.opik.flush();
-            return { isStagnant: true, repoRef: proposal.repoRef, status: 'FAILED', error: e.message };
-        }
+    trace.update({ output: { error: e.message } });
+    trace.end();
+    await this.opik.flush();
+    return { isStagnant: true, repoRef: proposal.repoRef, status: 'FAILED', error: e.message };
+}
     }
 
     private async upsertRepoDoc(repoRef: string, data: any) {
-        if (!this.dbEnabled || !this.db) return;
-        const docId = repoRef.replace(/\//g, '-');
-        await this.db.collection('repositories').doc(docId).set({ repoRef, ...data, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-    }
+    if (!this.dbEnabled || !this.db) return;
+    const docId = repoRef.replace(/\//g, '-');
+    await this.db.collection('repositories').doc(docId).set({ repoRef, ...data, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+}
 
     async listRepos() {
-        if (!this.dbEnabled || !this.db) return [];
-        const snapshot = await this.db.collection('repositories').get();
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    }
+    if (!this.dbEnabled || !this.db) return [];
+    const snapshot = await this.db.collection('repositories').get();
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
 
     async untrack(repoPath: string) {
-        if (!this.dbEnabled || !this.db) return { success: false, error: 'Database not enabled.' };
-        const repoRef = repoPath.includes('github.com') ? (repoPath.match(/github\.com\/([^\\/]+\/[^\\/]+)/)?.[1] || repoPath) : repoPath;
-        const docId = repoRef.replace(/\//g, '-');
-        await this.db.collection('repositories').doc(docId).delete();
-        return { success: true };
-    }
+    if (!this.dbEnabled || !this.db) return { success: false, error: 'Database not enabled.' };
+    const repoRef = repoPath.includes('github.com') ? (repoPath.match(/github\.com\/([^\\/]+\/[^\\/]+)/)?.[1] || repoPath) : repoPath;
+    const docId = repoRef.replace(/\//g, '-');
+    await this.db.collection('repositories').doc(docId).delete();
+    return { success: true };
+}
 
     async linkAccount(discordId: string, email: string) {
-        if (!this.dbEnabled || !this.db) return { success: false, error: 'Database not enabled.' };
-        await this.db.collection('users').doc(email).set({ discordId, email, linkedAt: FieldValue.serverTimestamp() }, { merge: true });
-        return { success: true };
-    }
+    if (!this.dbEnabled || !this.db) return { success: false, error: 'Database not enabled.' };
+    await this.db.collection('users').doc(email).set({ discordId, email, linkedAt: FieldValue.serverTimestamp() }, { merge: true });
+    return { success: true };
+}
 }
