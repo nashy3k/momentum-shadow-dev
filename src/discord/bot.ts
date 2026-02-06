@@ -94,11 +94,11 @@ const pendingProposals = new Map<string, MomentumProposal>();
 // For Hackathon, we'll keep it simple and just run the check for the main repo every day at 00:00 UTC (8 AM KL).
 // Real implementation would read from DB for per-user schedules.
 
-// Schedule: TEST MODE -> 3 PM KL (7 AM UTC)
-console.log('[Scheduler] Initializing Test Patrol (Scheduled for 3 PM KL)...');
-cron.schedule('0 7 * * *', async () => {
-    // Run at 07:00 UTC -> 15:00 (3 PM) KL Time
-    console.log('[Scheduler] 🕗 It is 3 PM KL. Starting Scheduled Test Patrol...');
+// Schedule: TEST MODE -> 10:30 PM KL (14:30 UTC)
+console.log('[Scheduler] Initializing Test Patrol (Scheduled for 10:30 PM KL)...');
+cron.schedule('30 14 * * *', async () => {
+    // Run at 14:30 UTC -> 22:30 (10:30 PM) KL Time
+    console.log('[Scheduler] 🕗 It is 10:30 PM KL. Starting Scheduled Test Patrol...');
     await runPatrol();
 });
 
