@@ -278,6 +278,11 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
 
     if (interaction.isChatInputCommand()) {
         const cmdInteraction = interaction as ChatInputCommandInteraction;
+        // ACKNOWLEDGE IMMEDIATELY to prevent "Unknown interaction" (3s timeout)
+        const sub = cmdInteraction.options.getSubcommand(false);
+        if (sub !== 'check') { // Check is fast, others might be slow interactions
+            await cmdInteraction.deferReply({ ephemeral: true });
+        }
 
         if (cmdInteraction.commandName === 'momentum') {
             const subcommand = cmdInteraction.options.getSubcommand();
@@ -348,7 +353,6 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
                 }
             } else if (subcommand === 'untrack') {
                 const repoInput = cmdInteraction.options.getString('repo')!.trim();
-                await cmdInteraction.deferReply({ ephemeral: true });
 
                 const result = await engine.untrack(repoInput);
                 if (result.success) {
@@ -358,7 +362,6 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
                 }
             } else if (subcommand === 'link') {
                 const email = cmdInteraction.options.getString('email')!.trim();
-                await cmdInteraction.deferReply({ ephemeral: true });
 
                 const result = await engine.linkAccount(cmdInteraction.user.id, email);
                 if (result.success) {
@@ -366,12 +369,9 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
                 } else {
                     await cmdInteraction.editReply(`❌ **Link Failed**: ${result.error || 'Unknown Error'}`);
                 }
-            } else if (subcommand === 'patrol') {
-                await cmdInteraction.deferReply({ ephemeral: true });
                 await cmdInteraction.editReply('🚀 **Manual Patrol Triggered.** Checking all tracked repositories for stagnation...');
                 await runPatrol();
             } else if (subcommand === 'debug') {
-                await cmdInteraction.deferReply({ ephemeral: true });
                 await cmdInteraction.editReply('🔧 **Maintenance Mode Activated.** Syncing dashboard metadata for all repositories (LLM skipped)...');
                 await runMaintenance();
                 await cmdInteraction.editReply('✅ **Sync Complete.** All tracked repositories have been refreshed on the dashboard.');
