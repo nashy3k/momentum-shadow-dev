@@ -1,4 +1,5 @@
 import * as dotenv from 'dotenv';
+console.log('[Bot] 💓 HEARTBEAT: Starting bot process...');
 dotenv.config({ override: true });
 
 // GLOBAL LOGGING: Add timestamps to every console log automatically
@@ -41,6 +42,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { CoreEngine } from '../core/engine.js';
 import type { MomentumProposal } from '../core/engine.js';
+import * as cron from 'node-cron';
 
 // Load .env
 // Redundant config removed as it's handled at top with override: true
@@ -56,7 +58,6 @@ if (!token) {
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 const engine = new CoreEngine();
 
-import * as cron from 'node-cron';
 
 // In-memory store (Hackathon grade)
 const pendingProposals = new Map<string, MomentumProposal>();
