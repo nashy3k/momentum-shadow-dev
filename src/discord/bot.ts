@@ -1,28 +1,30 @@
+// 1. Initial Heartbeat
+console.log('--- BOT PROCESS STARTING ---');
+
 import * as dotenv from 'dotenv';
-console.log('[Bot] 💓 HEARTBEAT: Starting bot process...');
 dotenv.config({ override: true });
 
-// GLOBAL LOGGING: Add timestamps to every console log automatically
+// 2. Global Logging Setup
 const originalLog = console.log;
 const originalError = console.error;
 const originalWarn = console.warn;
-
 const getTimestamp = () => new Date().toISOString() + ': ';
 
 console.log = (...args) => originalLog(getTimestamp(), ...args);
 console.error = (...args) => originalError(getTimestamp(), ...args);
 console.warn = (...args) => originalWarn(getTimestamp(), ...args);
 
-// GLOBAL SAFETY: Catch unhandled errors to prevent silent crashes
+console.log('[Bot] 💓 HEARTBEAT: Logging system ready.');
+
+// 3. Early Error Catching
 process.on('uncaughtException', (err) => {
     console.error('[(CRITICAL) Uncaught Exception] The bot crashed:', err);
-    // Ideally, log this to a file or external service if possible
 });
-
 process.on('unhandledRejection', (reason, promise) => {
     console.error('[(CRITICAL) Unhandled Rejection] at:', promise, 'reason:', reason);
 });
 
+// 4. Imports
 import {
     Client,
     GatewayIntentBits,
@@ -44,20 +46,21 @@ import { CoreEngine } from '../core/engine.js';
 import type { MomentumProposal } from '../core/engine.js';
 import * as cron from 'node-cron';
 
-// Load .env
-// Redundant config removed as it's handled at top with override: true
+console.log('[Bot] 📦 Modules loaded.');
 
 const token = process.env.DISCORD_TOKEN;
-const clientId = '1464207508603408404'; // From user's input
+const clientId = '1464207508603408404';
 
 if (!token) {
     console.error('DISCORD_TOKEN not found in .env');
     process.exit(1);
 }
 
+// 5. Global Instances
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 const engine = new CoreEngine();
 
+console.log('[Bot] 🛠️ Instances created and Engine initialized.');
 
 // In-memory store (Hackathon grade)
 const pendingProposals = new Map<string, MomentumProposal>();
