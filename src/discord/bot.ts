@@ -424,7 +424,8 @@ async function runPatrol() {
             console.warn('[Bot] ⚠️ No repos found in DB. Use /momentum track to add one.');
         }
 
-        for (const repo of repos) {
+        for (const repoDoc of repos) {
+            const repo = repoDoc as any;
             const repoRef = repo.repoRef || repo.id;
             // Only patrol if it has a discord channel connected
             if (repo.discordChannelId) {
@@ -472,7 +473,8 @@ async function runMaintenance() {
     console.log('[Bot] 🔧 MAINTENANCE STARTED.');
     try {
         const repos = await engine.listRepos();
-        for (const repo of repos) {
+        for (const repoDoc of repos) {
+            const repo = repoDoc as any;
             const repoRef = repo.repoRef || repo.id;
             console.log(`[Bot] Syncing metadata for ${repoRef}...`);
             await engine.plan(repoRef, { discordChannelId: repo.discordChannelId }, { maintenanceOnly: true });
