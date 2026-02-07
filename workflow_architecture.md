@@ -30,10 +30,10 @@ graph LR
     end
 
     subgraph "Momentum Agent (The Brain)"
-        Discord -->|"3. Wake Up"| Plan[🧠 Planner Agent]
+        Discord -->|"3. Wake Up"| Plan[🐣 Junior Dev (Planner)]
         Plan -->|"4. Research"| Context[(Files & Docs)]
         Context --> Plan
-        Plan -->|"5. Draft Code"| Review[🧐 Senior Architect Agent]
+        Plan -->|"5. Draft Code"| Review[🧐 Senior Dev (Architect)]
         Review -->|"6. Approve/Reject"| Decision{Score > 7?}
     end
 
