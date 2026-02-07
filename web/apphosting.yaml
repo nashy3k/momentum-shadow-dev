@@ -7,7 +7,7 @@ runConfig:
   maxInstances: 10
 env:
   - variable: NODE_VERSION
-    value: 22
+    value: 20
   - variable: FIREBASE_PROJECT_ID
     value: momentum-shadow-dev-4321
   - variable: AUTH_SECRET
