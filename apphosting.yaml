@@ -1,18 +1,22 @@
 kind: AppHostingConfig
 schemaVersion: v1
-# Directing the build to the 'web' subfolder
 runConfig:
   concurrency: 80
   cpu: 1
   memoryMiB: 512
+  maxInstances: 10
 env:
   - variable: NODE_VERSION
-    value: 22
+    value: 20
   - variable: FIREBASE_PROJECT_ID
     value: momentum-shadow-dev-4321
   - variable: AUTH_SECRET
     secret: auth-secret
-  - variable: GOOGLE_ID
+  - variable: AUTH_GOOGLE_ID
     secret: google-id
-  - variable: GOOGLE_SECRET
+  - variable: AUTH_GOOGLE_SECRET
     secret: google-secret
+  - variable: AUTH_TRUST_HOST
+    value: "true"
+  - variable: AUTH_URL
+    value: "https://momentum-dashboard--momentum-shadow-dev-4321.us-central1.hosted.app"
