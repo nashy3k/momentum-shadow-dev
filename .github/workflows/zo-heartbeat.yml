@@ -14,7 +14,7 @@ jobs:
         with:
           host: ${{ secrets.ZO_HOST }}
           username: ${{ secrets.ZO_USER }}
-          key: ${{ secrets.ZO_SSH_KEY }}
+          key: ${{ secrets.ZO_KEY }}
           port: ${{ secrets.ZO_PORT }}
           script: |
             echo "👋 GitHub Action connected. Server is awake."
