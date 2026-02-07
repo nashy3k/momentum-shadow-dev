@@ -9,9 +9,48 @@ The answer lies in **Cognitive Load** and **Persona constraints**.
 | **Context Window** | Full of file contents, tool outputs, and noise. | Clean. Only sees the *Proposal* and the *Rubric*. |
 | **Goal** | **Recall & Synthesis** (Generate a solution). | **Classification & verification** (Grade a solution). |
 | **Temperature** | High (0.7) - Needs creativity. | Low (0.1) - Needs determinism. |
-| **Model** | **Gemini 3 Flash** | **Gemini 3 Flash** |
 
 ## The Workflow Diagram
+
+### 1. Presentation View (Simplified)
+Use this for your **Pitch Deck Slides**. It focuses on the value loop: `Trigger -> Brain -> Action`.
+
+```mermaid
+graph LR
+    %% Styles
+    classDef trigger fill:#E1F5FE,stroke:#039BE5,stroke-width:2px,color:black
+    classDef agent fill:#F3E5F5,stroke:#8E24AA,stroke-width:2px,color:black
+    classDef action fill:#E8F5E9,stroke:#43A047,stroke-width:2px,color:black
+    classDef infra fill:#FFF3E0,stroke:#FB8C00,stroke-width:2px,stroke-dasharray: 5 5,color:black
+
+    %% Nodes
+    subgraph "The Trigger"
+        User(👨‍💻 Developer) -->|"1. !help I'm stuck"| Discord
+        Cron(⏰ Daily Patrol) -->|"2. Detect Stagnation"| Discord
+    end
+
+    subgraph "Momentum Agent (The Brain)"
+        Discord -->|"3. Wake Up"| Plan[🧠 Planner Agent]
+        Plan -->|"4. Research"| Context[(Files & Docs)]
+        Context --> Plan
+        Plan -->|"5. Draft Code"| Review[🧐 Senior Architect Agent]
+        Review -->|"6. Approve/Reject"| Decision{Score > 7?}
+    end
+
+    subgraph "The Output"
+        Decision -->|Yes| PR[🚀 Shadow PR Created]
+        Decision -->|No| Learn[📝 Save Lesson to Memory]
+        PR -->|"7. Unblock User"| User
+    end
+
+    %% Apply Styles
+    class User,Cron,Discord trigger
+    class Plan,Context,Review,Decision agent
+    class PR,Learn action
+```
+
+### 2. Engineering View (Detailed)
+Use this for the **README** and technical docs. It includes the database schema and observability layers.
 
 ```mermaid
 graph TD
@@ -25,14 +64,14 @@ graph TD
     end
 
     subgraph "The Hippocampus (Memory & Skills)"
-        Recall -->|Vector Search| Memories[("Firestore Memories")]
+        Recall -->|Vector Search| Memories[(Firestore Memories)]
         Recall -->|Local Read| Skills[(".agent/skills/*.md")]
         Memories & Skills --> Enriched[Enriched System Prompt]
     end
 
     subgraph "Junior Dev (Generation Phase)"
         Enriched --> Research[Research Loop]
-        Research -->|"listFiles / getFile"| Repo[("GitHub Repository")]
+        Research -->|"listFiles / getFile"| Repo[(GitHub Repository)]
         Research -->|"Context Gathered"| Draft[Draft Proposal]
     end
 
@@ -51,10 +90,13 @@ graph TD
 
     subgraph "Action Phase"
         Score -->|"Yes"| Discord[Discord Bot]
-        Sync -->|Update Metadata| DB[("Google Firestore")]
+        Sync -->|Update Metadata| DB[(Google Firestore)]
         Discord -->|"4. Review Request"| UserReview(["Human Approval"])
         UserReview -->|"Approve"| Push[Execute Shadow PR]
         UserReview -->|"Reject"| LearnH[Save Human Memory]
+        UserReview -->|"Score Trace"| OpikFB[[Opik Feedback Score 0.0 / 1.0]]
+        Push -->|"Status: ACCEPTED"| Proposals["Firestore Proposals"]
+        LearnH --> Proposals
         LearnH --> Memories
     end
 
@@ -65,7 +107,6 @@ graph TD
     style ZoHost fill:#f1c40f,color:black,stroke:#f39c12
     style Memories fill:#ff4757,color:white
     style Skills fill:#ffa502,color:black
-    style UserReview fill:#27ae60,color:white
     style UserReview fill:#27ae60,color:white
 
     %% Opik Tracing Layer
@@ -86,79 +127,72 @@ graph TD
 ```
 
 
+## Strategic Observability Value (Comet Opik)
+By unifying every patrol cycle under a unique **Cycle ID**, Momentum establishes a transparent audit trail for autonomous decisions. This links three distinct operational phases in **Comet Opik** into a single cohesive narrative:
+
+1.  **`momentum-plan`** (Research Phase)
+    *   Junior Dev research iterations (`brain-research`) and draft proposal generation.
+2.  **`momentum-evaluate`** (Audit Phase)
+    *   Senior Dev's **Reasoning Trace** and quantitative evaluation scores.
+3.  **`momentum-execute`** (Action Phase)
+    *   The formalized creation of the GitHub Issue or Pull Request.
+
+**Unified Visibility**: The Dashboard utilizes deep-linking via query tags (`tags contains cycle:<id>`), ensuring that stakeholders can witness the progression from initial thought to final action with 100% transparency—a core design principle of the Momentum architecture.
+
+### Key Innovations for Evaluators
+For technical reviewers and the Opik team, Momentum demonstrates advanced implementation of the following concepts:
+
+1.  **Asynchronous Timeline Stitching (Cycle ID)**:
+    *   Handles the challenge of maintaining context across disconnected operational windows (Research vs. Human-delayed Execution).
+    *   Persists a unique `cycle_id` in Firestore, allowing the system to re-hydrate and tag execution traces hours or days after the initial plan was generated.
+
+2.  **LLM-as-a-Judge Tracing**:
+    *   Leverages Opik not just for logging, but for auditing the decision-making rubric of the "Senior Dev" evaluator.
+    *   Captures high-fidelity reasoning traces alongside numerical scores, creating a structured dataset for future model fine-tuning.
+
+3.  **Observability as a User Feature**:
+    *   Elevates tracing from a developer tool to a trust-building feature. The "View Brain Trace" deep-link empowers users to understand the *why* behind every autonomous change.
 
 ## The Learning Mechanism (Reflexion vs. Evolution)
-You asked: *"Does this system learn from itself?"*
-
-Yes, in two distinct ways. We have implemented the first, and the second is our roadmap.
+The system employs a dual-layered learning strategy to ensure continuous improvement in performance and alignment.
 
 ### 1. Short-Term Learning (Reflexion) ✅ *Implemented*
-This is the **Feedback Loop** in the diagram above.
-*   **How it works**: When the *Senior Dev* rejects a proposal, it doesn't just say "No". It provides a detailed critique (e.g., "You forgot to handle the error in line 45").
-*   **The Learning**: The *Junior Dev* takes this critique and its original draft, and "reflects" on the mistake to generate a superior second draft.
-*   **Result**: The system "learns" within the span of 30 seconds. It solves problems it couldn't solve in a single shot.
+*   **Operational Flow**: Rejections from the Senior Dev trigger a "Reflexion" loop.
+*   **Methodology**: The Junior Dev receives a specific critique (e.g., "Error handling missing on line 45") and uses this as context to generate a superior second iteration.
+*   **Outcome**: Intra-cycle error correction that prevents flawed proposals from reaching the human reviewer.
 
 ### 2. Long-Term Learning (Evolution) ✅ *Implemented*
-*   **The Concept**: Every interaction and feedback is stored in the **Hippocampus** (Firestore Vector Store).
-*   **How it works**: Momentum uses Genkit's `gemini-embedding-001` to vectorize successes and failures.
-*   **The Recall**: During the next planning phase, the engine performs a RAG (Retrieval-Augmented Generation) search for relevant "Lessons Learned" and injects them into the Junior Dev's system prompt.
-*   **Expert System Skills**: The engine also bridges the gap with explicit human guidance by automatically syncing `.agent/skills/*.md` files into the reasoning context.
-*   **Human-in-the-loop Learning**: Rejections on Discord are captured as "Negative Memories," ensuring the bot doesn't make the same stylistic mistake twice.
-*   **Result**: The system evolves with every repo check, becoming a permanently improving partner that follows your project-specific standards.
+*   **Concept**: Every interaction and bit of feedback is persisted to the **Hippocampus** (Firestore Vector Store).
+*   **Methodology**: Momentum utilizes `gemini-embedding-001` to vectorize successes, failures, and human stylistic preferences.
+*   **Contextual Recall**: During planning, the engine performs RAG-based retrieval on past "Lessons Learned," injecting high-relevance tribal knowledge into the generation prompt.
+*   **Expert System Integration**: Automatically synchronizes human-authored `.agent/skills/*.md` files into the reasoning context, bridging the gap between AI intuition and team-specific standards.
 
-## 🧠 The "Golden Nugget": Hybrid SDK Strategy
+## 🧠 Strategic SDK Implementation: The Hybrid Strategy
+Momentum utilizes a **split-brain SDK architecture**, leveraging the specific strengths of distinct libraries to optimize performance.
 
-One of the most powerful architectural decisions in Momentum is the **split-brain SDK implementation**. Rather than fighting with a single abstraction, we leverage the distinct strengths of two Google-native libraries alongside the Gemini 3 Flash model.
-
-| SDK | Component | Reason for Choice |
+| SDK | Application | Rationale |
 | :--- | :--- | :--- |
-| **Google Generative AI SDK** | **The Planner (CoreEngine)** | **Low-Level Control**: The `generateContent` API provides raw access to token streams. Crucial for the "Senior Dev" persona to prevent hallucinations.<br><br>**Specs**:<br>• File: `src/core/engine.ts`<br>• Model: `gemini-3-flash-preview`<br>• Why: Pro-grade reasoning & 2.0-killing speed. |
-| **Firebase Genkit** | **The Memory (Hippocampus)** | **Type-Safe Abstraction**: Genkit shines at "Flows" by handling the vectorization pipeline with zero friction.<br><br>**Specs**:<br>• File: `src/core/memory.ts`<br>• Plugin: `googleai/gemini-3-flash-preview`<br>• Why: Genkit's wrapper for the latest flagship Flash model. |
+| **Google Generative AI SDK** | **Planner (CoreEngine)** | **Low-Level Precision**: The raw `generateContent` API provides granular control over token streams and model parameters, essential for high-fidelity reasoning. |
+| **Firebase Genkit** | **Memory (Hippocampus)** | **Type-Safe Abstraction**: Genkit excels at managing "Flows" and vectorization pipelines with strong typing (Zod) and built-in tracing. |
 
-**Why this matters for your demo:**
-> "We didn't just use a framework. We architected a hybrid. We use raw metal (SDK) for the thinking, and modern plumbing (Genkit) for the memory. This gives us the speed of a script with the structure of an enterprise app."
+## 🛠️ Framework Comparison: Why Genkit?
 
-## 🛠️ Tech Stack: Why Genkit? (vs LangChain / n8n)
+| Framework | Target Use Case | Momentum Choice Logic |
+| :--- | :--- | :--- |
+| **LangChain** | Generic Model Wrapping | **Avoided**: High abstraction overhead and inconsistent latency across different model adapters. |
+| **n8n** | Node-Based Prototyping | **Avoided**: Complex logic becomes unmanageable in graph-based JSON structures; lacks strong typing. |
+| **Vercel AI SDK** | Frontend/Chat UIs | **Avoided for Backend**: Excellent for React Hooks and streaming to UI, but lacks Genkit's robust backend "Flow" orchestration and deep Google Cloud/Firestore primitives. |
+| **Firebase Genkit** | **Production AI Services** | **Chosen**: First-party Google/Firebase optimization, native Gemini/Vertex support, and superior local developer UI for tracing. |
 
-Momentum chose **Firebase Genkit** as its backbone for robust, production-grade AI integration. Here is the comparison for your slide deck:
+## ⚙️ System Operations & Maintenance
 
-### 1. Code-First vs. Graph-First (vs n8n)
-*   **The Problem with n8n**: Low-code tools are great for prototyping, but `JSON` logic gets messy at scale.
-*   **The Genkit Win**: Momentum is written in **TypeScript**. Our prompts, flows, and memory logic are strongly typed. If the API schema changes, our build fails *before* deployment, not during the demo.
+### The Debug Command (Metadata Refresh)
+**Usage**: `/momentum debug`
+**Function**: Triggers a **Pulse Sync** cycle that bypasses LLM logic to refresh repository metadata (stagnation status, last commit metrics) in Firestore. This ensures the Dashboard remains accurate without incurring unnecessary token latency or cost.
 
-### 2. Native Google Integration (vs LangChain)
-*   **The Problem with LangChain**: It's a "Generic Wrapper". It adds varied latency and abstraction layers to support every model under the sun.
-*   **The Genkit Win**: Genkit is built *by* the Firebase/Google team. It has first-party support for `gemini-3-flash-preview` and `gemini-embedding-001`. There is no "translation layer"—it is pure, optimized utilization of the Google Cloud infrastructure.
+### Zo Runtime Stability (Resilience Mesh)
+The bot utilizes a hybrid resilience model to maintain 24/7 availability on the Zo Free Tier:
 
-### 3. Observability Out-of-the-Box
-*   **The Feature**: Genkit's Developer UI allows us to inspect the "Memory" flow in real-time. We can see exactly what the embedding vector looks like and which "Lesson Learned" was retrieved, without adding a single line of `console.log`.
-
-## Professional Observability (Opik Cycle-Based Linking)
-To ensure the system isn't a "Black Box", every patrol cycle is unified under a unique **Cycle ID**. This links three distinct traces in **Comet Opik** into a single cohesive narrative:
-
-1.  **`momentum-plan`** (Root Trace)
-    *   Junior Dev loop (`brain-research`) and initial proposal.
-2.  **`momentum-evaluate`** (Evaluation Trace)
-    *   Senior Dev's **Reasoning Trace** and numerical `score`.
-3.  **`momentum-execute`** (Action Trace)
-    *   The final creation of the GitHub Issue/PR.
-
-**The Filter**: The Dashboard deep-links using `tags contains cycle:<id>`, ensuring that when a user clicks **"View Patrol Cycle"**, they see all three phases (The Thought, The Audit, and The Action) at once. This 100% transparency is a core design principle of Momentum.
-
-### Core Opik Applications
-The three major innovations:
-
-1.  **The "Cycle ID" Strategy**:
-    *   *Problem*: Async bots often lose context between the "Plan" (Job A) and the "Execution" (Job B) which might happen hours later after human approval.
-    *   *Solution*: We persist a generic `cycle_id` in Firestore. When the user clicks "Approve" in Discord, we re-hydrate that ID and tag the execution trace. This stitches together a fragmented timeline into one cohesive Opik story.
-
-2.  **LLM-as-a-Judge Implementation**:
-    *   We don't just "log" data. We use Opik to trace the **Senior Dev's Evaluation**.
-    *   The `momentum-evaluate` span captures the input (Draft Code), the output (Score), and the *reasoning* (The Critique). This creates a dataset that we can use to fine-tune the Junior Dev later.
-
-3.  **Deep-Linking from Dashboards**:
-    *   We treat Opik as a "Customer-Facing" feature. The "View Brain Trace" button isn't just for us—it's for the end-user to trust the bot.
-
-## Operations: Maintenance Mode (The Debug Command)
-Usage: `/momentum debug`
-This mode triggers the **Pulse Sync Only** branch on the **Zo Computer**. It updates the **Firestore** metadata (days stagnant, last commit) without triggering LLM calls. This allows for frequent UI updates without cost or latency.
+1.  **Managed Service**: The process is supervised by the Zo "Sites" engine with the entrypoint `npm run start-bot`. This ensures the process is "Auto-Healed" upon container wake-up.
+2.  **External Pulse (UptimeRobot)**: Pings the public endpoint every 5 minutes to trigger the Zo infrastructure's wake-up mechanism.
+3.  **Graceful Exit**: Implements a `SIGTERM` handler ("Last Gasp") to notify Discord before the container undergoes scheduled rotation or sleep, ensuring transition visibility.
