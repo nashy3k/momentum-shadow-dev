@@ -100,6 +100,13 @@ const pendingProposals = new Map<string, MomentumProposal>();
 // Schedule: DEFAULT -> 8:00 AM KL (00:00 UTC)
 console.log('[Scheduler] Initializing Daily Patrol (Scheduled for 8:00 AM KL)...');
 cron.schedule('0 0 * * *', async () => {
+    // START HACKATHON TOGGLE
+    if (process.env.ENABLE_DAILY_PATROL === 'false') {
+        console.log('[Scheduler] ⏸️ Daily Patrol SKIPPED (ENABLE_DAILY_PATROL=false)');
+        return;
+    }
+    // END HACKATHON TOGGLE
+
     // Run at 00:00 UTC -> 08:00 AM KL Time
     console.log('[Scheduler] 🕗 It is 8:00 AM KL. Starting Scheduled Patrol...');
     await runPatrol();
