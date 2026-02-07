@@ -165,7 +165,8 @@ const server = http.createServer((req, res) => {
 
 server.on('error', (e: any) => {
     if (e.code === 'EADDRINUSE') {
-        console.warn(`[KeepAlive] Port ${PORT} is already in use. The bot will continue, but the health check may fail if owned by a zombie process.`);
+        console.error(`[CRITICAL] Port ${PORT} is busy. Crashing to force container restart.`);
+        process.exit(1); // Force Zo to restart us
     } else {
         console.error(`[KeepAlive] Server error:`, e);
     }
