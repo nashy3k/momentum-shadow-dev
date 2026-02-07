@@ -25,21 +25,21 @@ graph LR
 
     %% Nodes
     subgraph "The Trigger"
-        User(👨‍💻 Developer) -->|"1. !help I'm stuck"| Discord
-        Cron(⏰ Daily Patrol) -->|"2. Detect Stagnation"| Discord
+        User("👨‍💻 Developer") -->|"1. !help I'm stuck"| Discord
+        Cron("⏰ Daily Patrol") -->|"2. Detect Stagnation"| Discord
     end
 
     subgraph "Momentum Agent (The Brain)"
-        Discord -->|"3. Wake Up"| Plan[🐣 Junior Dev (Planner)]
-        Plan -->|"4. Research"| Context[(Files & Docs)]
+        Discord -->|"3. Wake Up"| Plan["🐣 Junior Dev (Planner)"]
+        Plan -->|"4. Research"| Context[("(Files & Docs)")]
         Context --> Plan
-        Plan -->|"5. Draft Code"| Review[🧐 Senior Dev (Architect)]
+        Plan -->|"5. Draft Code"| Review["🧐 Senior Dev (Architect)"]
         Review -->|"6. Approve/Reject"| Decision{Score > 7?}
     end
 
     subgraph "The Output"
-        Decision -->|Yes| PR[🚀 Shadow PR Created]
-        Decision -->|No| Learn[📝 Save Lesson to Memory]
+        Decision -->|Yes| PR["🚀 Shadow PR Created"]
+        Decision -->|No| Learn["📝 Save Lesson to Memory"]
         PR -->|"7. Unblock User"| User
     end
 
