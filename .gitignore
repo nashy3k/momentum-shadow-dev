@@ -43,3 +43,7 @@ service-account-key.json
 !firebase.json
 !next.config.json
 !apphosting.yaml
+
+# Probes & Tests
+scripts/probe_paid_tier.ts
+scripts/probe_result_paid.txt
