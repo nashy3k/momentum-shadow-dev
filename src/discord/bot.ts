@@ -169,16 +169,31 @@ server.listen(PORT, () => {
 });
 
 // Graceful Shutdown: Ensure the port is released when the process dies
-const shutdown = () => {
-    console.log('[Bot] Shutting down gracefully...');
+// Graceful Shutdown: Ensure the port is released when the process dies
+const shutdown = async (signal: string) => {
+    console.log(`[Bot] Shutting down gracefully (${signal})...`);
+
+    // LAST GASP: Try to alert Discord
+    try {
+        const adminChannel = client.channels.cache.find(c =>
+            (c as any).name === 'command-center' || (c as any).name === 'admin-logs' || (c as any).name === 'momentum-admin'
+        );
+        if (adminChannel?.isTextBased()) {
+            await (adminChannel as any).send(`🔴 **Momentum Bot is going offline.** (Signal: ${signal})`);
+            console.log('[Bot] Sent offline alert.');
+        }
+    } catch (err) {
+        console.error('[Bot] Failed to send offline alert:', err);
+    }
+
     server.close(() => {
         client.destroy();
         process.exit(0);
     });
 };
 
-process.on('SIGINT', shutdown);
-process.on('SIGTERM', shutdown);
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
 
 (async () => {
     try {
