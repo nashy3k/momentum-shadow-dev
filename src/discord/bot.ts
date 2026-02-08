@@ -272,18 +272,78 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
                 const repo = repoInput;
                 await cmdInteraction.deferReply();
 
+                let typingInterval: NodeJS.Timeout | null = null;
                 try {
+                    // DISCORD TIMEOUT FIX: 
+                    // 1. We keep sending "Typing..." to let the user know we are alive.
+                    typingInterval = setInterval(() => {
+                        cmdInteraction.channel?.sendTyping().catch(() => { });
+                    }, 4000);
+
                     const result = await engine.plan(repo, { discordChannelId: cmdInteraction.channelId });
-                    // ... (rest of check logic) ...
-                    if (result.status === 'ACTIVE') {
-                        return cmdInteraction.editReply(`✅ **${result.repoRef}** is healthy! (Last active ${result.daysSince?.toFixed(1)} days ago).`);
+
+                    if (typingInterval) clearInterval(typingInterval);
+
+                    // 2. Use editReply if < 15 mins, but if it fails, try followUp
+                    const replyContent = result.status === 'ACTIVE'
+                        ? `✅ **${result.repoRef}** is healthy! (Last active ${result.daysSince?.toFixed(1)} days ago).`
+                        : (result.status === 'FAILED'
+                            ? `❌ **System Error**: ${result.error || 'Unknown Error'}`
+                            : null);
+
+                    if (replyContent) {
+                        await cmdInteraction.editReply(replyContent).catch(async () => {
+                            await cmdInteraction.followUp(replyContent);
+                        });
+                        return;
                     }
-                    if (result.status === 'FAILED') {
-                        return cmdInteraction.editReply(`❌ **System Error**: ${result.error || 'Unknown Error'}`);
+
+                    // ... (rest of logic continues below in next block)
+
+                    if (result.proposal) {
+                        const proposalId = Math.random().toString(36).substring(7);
+                        pendingProposals.set(proposalId, result.proposal);
+
+                        const embed = new EmbedBuilder()
+                            .setColor(0x0099FF)
+                            .setTitle('🚨 Stagnation Detected!')
+                            .setDescription(`The repository **${result.repoRef}** has been inactive for **${result.daysSince?.toFixed(1) || '3+'}** days.`)
+                            .addFields(
+                                { name: 'Brain Suggestion', value: result.proposal.description },
+                                { name: 'Target File', value: result.proposal.targetFile }
+                            );
+
+                        if (result.evaluation) {
+                            const badge = result.evaluation.score >= 9 ? '🟢' : result.evaluation.score >= 7 ? '🟡' : '🔴';
+                            embed.addFields({
+                                name: `${badge} Senior Dev Confidence (${result.evaluation.score}/10)`,
+                                value: result.evaluation.reasoning
+                            });
+                        }
+                        embed.setFooter({ text: 'Momentum Shadow Developer • Gemini 3 Flash' })
+                            .setTimestamp();
+
+                        const row = new ActionRowBuilder<ButtonBuilder>()
+                            .addComponents(
+                                new ButtonBuilder()
+                                    .setCustomId(`approve_${proposalId}`)
+                                    .setLabel('Approve & Push')
+                                    .setStyle(ButtonStyle.Success),
+                                new ButtonBuilder()
+                                    .setCustomId(`reject_${proposalId}`)
+                                    .setLabel('Reject')
+                                    .setStyle(ButtonStyle.Danger),
+                            );
+
+                        await cmdInteraction.editReply({ embeds: [embed], components: [row] }).catch(async () => {
+                            await cmdInteraction.followUp({ embeds: [embed], components: [row] });
+                        });
                     }
-                    // ...
                 } catch (err: any) {
-                    await cmdInteraction.editReply(`💥 **Fatal crash**: ${err.message || 'An unknown error occurred.'}`);
+                    clearInterval(typingInterval); // Ensure interval is cleared on error
+                    await cmdInteraction.editReply(`💥 **Fatal crash**: ${err.message || 'An unknown error occurred.'}`).catch(async () => {
+                        await cmdInteraction.followUp(`💥 **Fatal crash**: ${err.message || 'An unknown error occurred.'}`);
+                    });
                 }
             } else if (subcommand === 'patrol') {
                 console.log('[Bot] Entering PATROL block...'); // CHECKPOINT 3
