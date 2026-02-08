@@ -638,7 +638,32 @@ export class CoreEngine {
         const trace = this.opik.trace({ name: 'momentum-execute', input: { proposal }, tags: [`repo:${proposal.repoRef}`, `cycle:${proposal.originTraceId}`] });
         try {
             const repoUrl = proposal.repoRef.startsWith('http') ? proposal.repoRef : `https://github.com/${proposal.repoRef}`;
-            const issueUrl = `${repoUrl}/issues/${Math.floor(Math.random() * 100)}`;
+            const ghToken = process.env.GITHUB_TOKEN;
+
+            console.log(`[Core] Creating real GitHub issue for ${proposal.repoRef}...`);
+
+            // 1. Create the Issue via API
+            const response = await fetch(`https://api.github.com/repos/${proposal.repoRef}/issues`, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/vnd.github.v3+json',
+                    'Authorization': `token ${ghToken}`,
+                    'User-Agent': 'Momentum-Shadow-Developer'
+                },
+                body: JSON.stringify({
+                    title: proposal.title,
+                    body: `${proposal.body}\n\n### 🛠️ Proposed Change\n\n\`\`\`diff\n${proposal.codeChange}\n\`\`\`\n\n*Created by Momentum Shadow Developer*`
+                })
+            });
+
+            if (!response.ok) {
+                const errData = await response.json() as any;
+                throw new Error(`GitHub API Error: ${errData.message || response.statusText}`);
+            }
+
+            const issueData = await response.json() as any;
+            const issueUrl = issueData.html_url;
+            console.log(`[Core] ✅ GitHub Issue Created: ${issueUrl}`);
 
             // Persist to DB
             if (this.dbEnabled) {
