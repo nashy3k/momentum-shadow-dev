@@ -454,9 +454,9 @@ export class CoreEngine {
 
                 let result: any;
                 try {
-                    // UNIVERSAL SAFETY: 30s Timeout to prevent "Zombie Hangs"
+                    // UNIVERSAL SAFETY: 120s Timeout to prevent "Zombie Hangs" but allow Deep Reasoning
                     const timeoutPromise = new Promise((_, reject) =>
-                        setTimeout(() => reject(new Error('Genkit API Timeout (30s)')), 30000)
+                        setTimeout(() => reject(new Error('Genkit API Timeout (120s)')), 120000)
                     );
 
                     console.log(`[Core] ⏳ Sending message (Timeout: 30s)...`);
