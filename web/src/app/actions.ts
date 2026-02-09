@@ -11,7 +11,7 @@ export async function submitPatronRequest(repoUrl: string) {
         const request = {
             repoRef: cleanRepo,
             status: 'PENDING',
-            timestamp: FieldValue.serverTimestamp(),
+            timestamp: new Date().toISOString(),
             requestedAt: new Date().toISOString()
         };
 
