@@ -19,7 +19,9 @@
         "**/brain": true,
         "**/out": true,
         "**/.next/static": true,
-        "**/.next/cache": true
+        "**/.next/cache": true,
+        "**/.agent": true,
+        "**/tmp": true
     },
     "files.watcherExclude": {
         "**/node_modules/**": true,
@@ -38,7 +40,9 @@
         "**/brain/**": true,
         "**/out/**": true,
         "**/.next/static/**": true,
-        "**/.next/cache/**": true
+        "**/.next/cache/**": true,
+        "**/.agent/**": true,
+        "**/tmp/**": true
     },
     "files.exclude": {
         "**/.git": true,
@@ -54,7 +58,7 @@
         "**/artifacts": true,
         "**/brain": true
     },
-    "typescript.tsserver.maxTsServerMemory": 2048,
+    "typescript.tsserver.maxTsServerMemory": 8192,
     "typescript.disableAutomaticTypeAcquisition": true,
     "javascript.implicitProjectConfig.checkJs": false,
     "typescript.implicitProjectConfig.checkJs": false,
