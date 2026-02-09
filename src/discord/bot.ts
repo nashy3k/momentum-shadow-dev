@@ -456,10 +456,42 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
 
     if (interaction.isButton()) {
         const btnInteraction = interaction as ButtonInteraction;
-        const [action, proposalId] = btnInteraction.customId.split('_');
-        if (!proposalId) {
-            return btnInteraction.reply({ content: 'Invalid interaction.', ephemeral: true });
+        const customId = btnInteraction.customId;
+
+        // --- 1. Handle Patron Requests (Bypass proposal check) ---
+        if (customId.includes('_patron_')) {
+            const [action, , requestId] = customId.split('_');
+
+            if (action === 'approve') {
+                await btnInteraction.update({ content: '⚙️ **Processing Patron Request...**', components: [] });
+                try {
+                    const snap = await (engine as any).db.collection('patron_requests').doc(requestId).get();
+                    if (!snap.exists) return btnInteraction.editReply('❌ Request not found.');
+
+                    const data = snap.data();
+                    const result = await engine.monitorRepo(data.repoRef, btnInteraction.channelId);
+
+                    await snap.ref.update({ status: 'APPROVED', updatedAt: FieldValue.serverTimestamp() });
+
+                    await btnInteraction.editReply({
+                        content: `✅ **Patronage Accepted!** Now monitoring: **${result.repoRef}**.`,
+                        embeds: btnInteraction.message.embeds
+                    });
+                } catch (err: any) {
+                    await btnInteraction.editReply(`❌ **Failed to approve:** ${err.message}`);
+                }
+            } else if (action === 'reject') {
+                await (engine as any).db.collection('patron_requests').doc(requestId).update({
+                    status: 'REJECTED',
+                    updatedAt: FieldValue.serverTimestamp()
+                });
+                await btnInteraction.update({ content: '🚫 **Patron Request Deflected.**', components: [], embeds: [] });
+            }
+            return; // DONE
         }
+
+        // --- 2. Handle System Proposals ---
+        const [action, proposalId] = customId.split('_');
         const proposal = pendingProposals.get(proposalId);
 
         if (!proposal) {
@@ -540,38 +572,6 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
                 components: [],
                 embeds: btnInteraction.message.embeds as any
             });
-        }
-
-        // Handle Patron Requests
-        if (action === 'approve' && btnInteraction.customId.includes('_patron_')) {
-            const requestId = btnInteraction.customId.split('_patron_')[1];
-            await btnInteraction.update({ content: '⚙️ **Processing Patron Request...**', components: [] });
-
-            try {
-                const snap = await (engine as any).db.collection('patron_requests').doc(requestId).get();
-                if (!snap.exists) return btnInteraction.editReply('❌ Request not found.');
-
-                const data = snap.data();
-                const result = await engine.monitorRepo(data.repoRef, btnInteraction.channelId);
-
-                await snap.ref.update({ status: 'APPROVED', updatedAt: FieldValue.serverTimestamp() });
-
-                await btnInteraction.editReply({
-                    content: `✅ **Patronage Accepted!** Now monitoring: **${result.repoRef}**.`,
-                    embeds: btnInteraction.message.embeds
-                });
-            } catch (err: any) {
-                await btnInteraction.editReply(`❌ **Failed to approve:** ${err.message}`);
-            }
-        }
-
-        if (action === 'reject' && btnInteraction.customId.includes('_patron_')) {
-            const requestId = btnInteraction.customId.split('_patron_')[1];
-            await (engine as any).db.collection('patron_requests').doc(requestId).update({
-                status: 'REJECTED',
-                updatedAt: FieldValue.serverTimestamp()
-            });
-            await btnInteraction.update({ content: '🚫 **Patron Request Deflected.**', components: [], embeds: [] });
         }
     }
 });
