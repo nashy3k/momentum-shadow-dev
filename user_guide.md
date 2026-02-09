@@ -9,7 +9,7 @@ For the Hackathon v1.0, Momentum operates as a **Single-Tenant Backend** with a 
 | Component | Status | Who has access? |
 | :--- | :--- | :--- |
 | **The Brain (Zo Bot)** | **Private** | Only the Owner (`nashy3k`). The bot runs on a secure container using the Owner's Gemini 3 Flash API key. |
-| **The Dashboard** | **Public (Auth Gate)** | Any user with a Google Account can log in. |
+| **The Dashboard** | **Public** | [bit.ly/49UNR8B](http://bit.ly/49UNR8B) |
 | **The Data** | **Shared** | Currently, **all logged-in users** see the same fleet of repositories (the Owner's repos). |
 
 ### 🛑 Judge Access Limitations
@@ -28,7 +28,6 @@ If the system is "Locked" to the owner, you might wonder why the `/momentum link
 ### 🎮 Live Demo Invite
 Want to see the bot in action without hosting it? You can invite the **Momentum Demo Instance** to your own test Discord server:
 👉 [**Invite Momentum (Live Demo)**](https://discord.com/api/oauth2/authorize?client_id=1464207508603408404&permissions=346112&scope=bot%20applications.commands)  
-🔗 **Short Link (Alternative)**: [bit.ly/49UNR8B](http://bit.ly/49UNR8B)
 
 ## 2. Future Multi-Tenancy Roadmap (Commercial Phase)
 To move from "Hackathon Demo" to "SaaS Product", the following changes are required:
