@@ -12,12 +12,12 @@ For the Hackathon v1.0, Momentum operates as a **Single-Tenant Backend** with a 
 | **The Dashboard** | **Public** | [bit.ly/49UNR8B](http://bit.ly/49UNR8B) |
 | **The Data** | **Shared** | Currently, **all logged-in users** see the same fleet of repositories (the Owner's repos). |
 
-### 🛑 Judge Access Limitations
+### 🛑 Judge Access & Interaction
 If a Judge or User logs in with their own Google Account:
 1.  **They CAN**: View the live status of the Owner's repositories ("View Only" mode).
-2.  **They CANNOT**: Add their own repositories or trigger the bot.
-    *   *Reason*: The Bot on Zo is hardcoded to listen for the Owner's commands and uses the Owner's API keys. It does not yet dynamically load keys for other users.
-3.  **They CANNOT**: trigger actions that require specific GitHub permissions (unless they are the repo owner).
+2.  **They CAN**: Use the **"Request Momentum"** button to submit a public repository for a Patronage Cycle.
+    *   *How it works*: Your request is sent to the Momentum Discord. Once the owner approves it, the bot will start monitoring that repo and you will see it appearing on the dashboard.
+3.  **They CANNOT**: Add repositories directly to the fleet without approval (to prevent API abuse).
 
 ### ❓ Why should a Judge link their Discord ID?
 If the system is "Locked" to the owner, you might wonder why the `/momentum link` command exists for judges.
