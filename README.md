@@ -94,6 +94,7 @@ The Evaluator doesn't just "look" at the code; it executes a strict **Reasoning 
 *   **Accuracy Pipeline**: Uses a Dual-Brain architecture (Junior Dev vs. Senior Dev Architect) powered by **Gemini 3 Flash** to reduce hallucinations.
 *   **Cycle-Based Observability**: Groups Planning, Reasoning, and Execution traces into a single "Patrol Cycle" in Comet Opik.
 *   **Zo Computer Hosting**: 24/7 autonomous runtime environment on a dedicated container.
+*   **Community Patronage**: Guests can use the **"Request Momentum"** button on the dashboard to submit their own repositories for a one-off audit cycle.
 *   **Dynamic Dashboard**: Real-time fleet monitoring with **Google Firestore** persistence and deep-trace links.
 
 ## 🔮 Professional Observability (Opik)
@@ -140,6 +141,7 @@ If you are a judge or a curious visitor, you don't need to deploy anything to se
 
 *   **Live Dashboard**: [https://momentum-shadow-dev-4321.web.app/](https://momentum-shadow-dev-4321.web.app/)
     *   *Login with any Google account to see the current fleet of monitored repos.*
+    *   *Click "Request Momentum" to submit your own public repository for a one-off audit.*
 *   **Discord Interaction**: You can invite the demo bot to your server to test the `/momentum check` and `/momentum link` commands.
     *   👉 [**Invite Momentum (Live Demo Bot)**](https://discord.com/api/oauth2/authorize?client_id=1464207508603408404&permissions=346112&scope=bot%20applications.commands)
 
