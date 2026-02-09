@@ -27,7 +27,8 @@ If the system is "Locked" to the owner, you might wonder why the `/momentum link
 
 ### 🎮 Live Demo Invite
 Want to see the bot in action without hosting it? You can invite the **Momentum Demo Instance** to your own test Discord server:
-👉 [**Invite Momentum (Live Demo)**](https://discord.com/api/oauth2/authorize?client_id=1464207508603408404&permissions=346112&scope=bot%20applications.commands)
+👉 [**Invite Momentum (Live Demo)**](https://discord.com/api/oauth2/authorize?client_id=1464207508603408404&permissions=346112&scope=bot%20applications.commands)  
+🔗 **Short Link (Alternative)**: [bit.ly/49UNR8B](http://bit.ly/49UNR8B)
 
 ## 2. Future Multi-Tenancy Roadmap (Commercial Phase)
 To move from "Hackathon Demo" to "SaaS Product", the following changes are required:
